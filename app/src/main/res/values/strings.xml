@@ -1,0 +1,39 @@
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+    <string name="app_name">Axinom DRM Sample Player</string>
+    <string name="select_video">Select the video to play</string>
+    <string name="error_drm_unsupported_scheme">This device does not support the required DRM scheme</string>
+    <string name="error_drm_unknown">An unknown DRM error occurred</string>
+    <string name="error_no_decoder">This device does not provide a decoder for <xliff:g id="mime_type">%1$s</xliff:g></string>
+    <string name="error_no_secure_decoder">This device does not provide a secure decoder for <xliff:g id="mime_type">%1$s</xliff:g></string>
+    <string name="error_querying_decoders">Unable to query device decoders</string>
+    <string name="error_instantiating_decoder">Unable to instantiate decoder <xliff:g id="decoder_name">%1$s</xliff:g></string>
+    <string name="error_player_unknown">An unknown player error: %1$s</string>
+    <string name="error_unsupported_file_format">Unsupported file format</string>
+    <string name="error_video_list">Error loading list of videos from website</string>
+    <string name="error_drm_token">Error getting DRM token from server</string>
+    <string name="storage_permission_denied">Permission to access storage was denied</string>
+    <string name="request_license">Request license</string>
+    <string name="delete">Delete</string>
+    <string name="download">Download</string>
+    <string name="download_progress">Download progress: %d %%</string>
+    <string name="play">Play</string>
+    <string name="play_offline">Play offline</string>
+    <string name="remove_license">Remove license</string>
+    <string name="remove_all">Remove all licenses</string>
+    <string name="available_offline">Available offline. Content is downloaded and license is valid.</string>
+    <string name="not_available_offline">Not available offline.</string>
+    <string name="not_available_offline_not_downloaded">Not available offline. Not downloaded.</string>
+    <string name="not_available_offline_license_not_valid">Not available offline. Content is downloaded but license is not valid.</string>
+    <string name="not_available_offline_license_check_error">Not available offline. Content is downloaded but license check failed.</string>
+    <string name="error_no_connection_for_downloading">No network connection</string>
+    <string name="error_sample_videos_list_empty">Sample videos list is empty</string>
+    <string name="error_format_not_supported">Format not supported</string>
+    <string name="player_online_playback">Online playback</string>
+    <string name="player_offline_playback">Offline playback</string>
+    <string name="error_offline_playback">Problem starting offline playback.</string>
+    <string name="error_drm_token_parse">DRM token has incorrect format and cannot be parsed.</string>
+    <string name="error_drm_keys_expired">Offline DRM keys are expired.</string>
+    <string name="error_no_connection_for_license_download">Offline license cannot be downloaded. No connection.</string>
+    <string name="error_license_server">Offline license cannot be downloaded. Check that licence server is correct.</string>
+    <string name="error_drm_message_not_persistent">Offline license cannot be downloaded. Drm message persistent flag is not true.</string>
+</resources>

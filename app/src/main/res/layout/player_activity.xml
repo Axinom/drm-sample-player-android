@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+             xmlns:app="http://schemas.android.com/apk/res-auto"
+             android:id="@+id/root"
+             android:focusable="true"
+             android:layout_width="match_parent"
+             android:layout_height="match_parent"
+             android:keepScreenOn="true">
+
+  <com.google.android.exoplayer2.ui.PlayerView
+      android:id="@+id/player_view"
+      android:layout_width="match_parent"
+      android:layout_height="match_parent"
+      app:show_buffering="when_playing"
+      app:show_shuffle_button="true"/>
+
+  <TextView
+      android:id="@+id/player_playback_source"
+      android:layout_width="wrap_content"
+      android:layout_height="wrap_content"
+      android:layout_margin="@dimen/player_playback_source_text_margin"
+      android:textColor="#FF0000"
+      android:textSize="@dimen/welcome_page_font_size"/>
+
+</FrameLayout>

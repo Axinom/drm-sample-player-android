@@ -1,0 +1,21 @@
+<resources>
+
+    <style name="VideoList" parent="TextAppearance.AppCompat.Subhead">
+        <item name="android:textColor">@android:color/black</item>
+    </style>
+
+    <style name="AppTheme" parent="android:Theme.Holo.Light.DarkActionBar">
+        <item name="android:windowBackground">@android:color/white</item>
+        <item name="android:text">@android:color/black</item>
+        <item name="android:textAppearanceListItemSmall">@style/VideoList</item>
+    </style>
+
+    <style name="RootTheme" parent="android:Theme.Holo">
+    </style>
+
+    <style name="PlayerTheme" parent="@style/RootTheme">
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowBackground">@android:color/black</item>
+    </style>
+
+</resources>

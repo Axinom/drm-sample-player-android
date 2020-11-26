@@ -1,0 +1,11 @@
+<resources>
+    <dimen name="welcome_page_font_size">20sp</dimen>
+    <dimen name="welcome_page_margin_vertical">20dp</dimen>
+    <dimen name="welcome_page_margin_horizontal">20dp</dimen>
+    <dimen name="button_width">100dp</dimen>
+    <dimen name="button_height">30dp</dimen>
+    <dimen name="offline_availability_text_size">20sp</dimen>
+    <dimen name="download_progress_text_size">20sp</dimen>
+    <dimen name="player_playback_source_text_size">20sp</dimen>
+    <dimen name="player_playback_source_text_margin">20dp</dimen>
+</resources>
