@@ -108,7 +108,7 @@ class DemoPlayer implements ExoPlayer.EventListener, VideoListener, TextOutput, 
     return mPlayerIsCreated;
   }
 
-  // Method for creating player using predefined parameters
+  // A method for creating player using predefined parameters
   private void playerCreate(Params params){
     mBandwidthMeter = new DefaultBandwidthMeter.Builder(mContext).setResetOnNetworkTypeChange(false).build();
     mMediaDataSourceFactory = buildDataSourceFactory();
@@ -152,7 +152,7 @@ class DemoPlayer implements ExoPlayer.EventListener, VideoListener, TextOutput, 
     }
   }
 
-  /** Returns a new DataSource factory. */
+  // Returns a new DataSource factory
   private DataSource.Factory buildDataSourceFactory() {
     // If offline playback is allowed and media has already been downloaded,
     // use CacheDataSource from AxOfflineManager
@@ -186,7 +186,7 @@ class DemoPlayer implements ExoPlayer.EventListener, VideoListener, TextOutput, 
     mListeners.add(listener);
   }
 
-  // Method for building MediaSource for playback
+  // A method for building MediaSource for playback
   private MediaSource buildMediaSource(Context context, Uri videoUri){
     Log.d(TAG, "buildMediaSource() called with: context = [" + context + "], videoUri = [" + videoUri + "]");
 
@@ -214,18 +214,18 @@ class DemoPlayer implements ExoPlayer.EventListener, VideoListener, TextOutput, 
     }
   }
 
-  // Method for building HttpDataSource.Factory
+  // A method for building HttpDataSource.Factory
   private HttpDataSource.Factory buildHttpDataSourceFactory(Context context, boolean useBandwidthMeter) {
     return new DefaultHttpDataSourceFactory(Util.getUserAgent(context,
             PLAYER_APP_NAME), useBandwidthMeter ? mBandwidthMeter : null);
   }
 
-  // Method for building DrmSessionManager
+  // A method for building DrmSessionManager
   private DefaultDrmSessionManager<ExoMediaCrypto> buildDrmSessionManager(Context context,
                                                                           String licenseUrl, String drmToken) {
     HttpMediaDrmCallback drmCallback = new HttpMediaDrmCallback(licenseUrl,
             buildHttpDataSourceFactory(context, false));
-    // here the license token is attached to license request
+    // Here the license token is attached to license request
     if (drmToken != null) {
         drmCallback.setKeyRequestProperty("X-AxDRM-Message", drmToken);
     }
@@ -236,7 +236,7 @@ class DemoPlayer implements ExoPlayer.EventListener, VideoListener, TextOutput, 
 
   }
 
-  // Method for preparing the player for creation
+  // A method for preparing the player for creation
   public void prepare(Params params, PlayerView playerView) {
     Log.d(TAG, "prepare() called with: params = [" + params + "]");
     mParams = params;
@@ -248,7 +248,7 @@ class DemoPlayer implements ExoPlayer.EventListener, VideoListener, TextOutput, 
     }
   }
 
-  // Method for preparing the player
+  // A method for preparing the player
   private void startPlayerPrepare() {
     Log.d(TAG, "startPlayerPrepare() called");
     MediaSource mediaSource = buildMediaSource(mContext, mParams.contentUri);
@@ -330,7 +330,6 @@ class DemoPlayer implements ExoPlayer.EventListener, VideoListener, TextOutput, 
     dispatchPlayerError(exception);
   }
 
-
   @Override
   public void onCues(@NonNull List<Cue> cues) {
     Log.d(TAG, "onCues() called with: cues = [" + cues + "]");
@@ -338,7 +337,7 @@ class DemoPlayer implements ExoPlayer.EventListener, VideoListener, TextOutput, 
 
   @Override
   public void onLicenseDownloaded(String manifestUrl) {
-    // not used player implementation
+    // Not used player implementation
   }
 
   @Override
@@ -413,7 +412,7 @@ class DemoPlayer implements ExoPlayer.EventListener, VideoListener, TextOutput, 
         return;
       }
     }
-    // check that if license persistent flag is true, then we can try to download license
+    // Check that if license persistent flag is true, then we can try to download license
     if (drmMessage != null && drmMessage.persistent) {
       Log.d(TAG, "Drm message has persistent flag");
       if (!hasConnection()) {
@@ -447,5 +446,4 @@ class DemoPlayer implements ExoPlayer.EventListener, VideoListener, TextOutput, 
             .getSystemService(Context.CONNECTIVITY_SERVICE);
     return (cm != null && cm.getActiveNetworkInfo() != null);
   }
-
 }

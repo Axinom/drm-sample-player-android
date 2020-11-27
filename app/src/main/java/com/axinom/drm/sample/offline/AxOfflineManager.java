@@ -27,7 +27,6 @@ import java.io.IOException;
 
 /**
  * A class that manages the initialization of DownloadManager and data source factory objects.
- *
  */
 public class AxOfflineManager {
 
@@ -50,7 +49,7 @@ public class AxOfflineManager {
         DEFAULT_DOWNLOADS_FOLDER += "downloads";
     }
 
-    // Return and create if necessary the AxOfflineManager instance
+    // Return and create the AxOfflineManager instance if necessary
     public static AxOfflineManager getInstance() {
         if (sAxOfflineManager == null) {
             sAxOfflineManager = new AxOfflineManager();
@@ -115,14 +114,14 @@ public class AxOfflineManager {
         return mDownloadCache;
     }
 
-    /** Returns a {@link DataSource.Factory}. */
+    // Returns a {@link DataSource.Factory}
     public DataSource.Factory buildDataSourceFactory(Context context) {
         DefaultDataSourceFactory upstreamFactory =
                 new DefaultDataSourceFactory(context, buildHttpDataSourceFactory());
         return buildReadOnlyCacheDataSource(upstreamFactory, getDownloadCache(context));
     }
 
-    /** Returns a {@link HttpDataSource.Factory}. */
+    // Returns a {@link HttpDataSource.Factory}
     private HttpDataSource.Factory buildHttpDataSourceFactory() {
         return new DefaultHttpDataSourceFactory(USER_AGENT);
     }
@@ -144,5 +143,4 @@ public class AxOfflineManager {
         }
         return databaseProvider;
     }
-
 }

@@ -30,7 +30,7 @@ public class AxDownloadService extends DownloadService {
     public static final String NOTIFICATION = "com.axinom.drm.sample.offline.AxDownloadService";
     public static final String PROGRESS = "progress";
 
-    // Helper for creating download notifications
+    // Helper for creating a download notifications
     private DownloadNotificationHelper notificationHelper;
 
     public AxDownloadService() {
@@ -71,13 +71,13 @@ public class AxDownloadService extends DownloadService {
         Notification notification = notificationHelper.buildProgressNotification(
                 R.drawable.ic_download, null, null, downloads);
         if (notification.extras != null) {
-            // notification about download progress is sent here
+            // Notification about download progress is sent here
             sendNotification(notification.extras.getInt(Notification.EXTRA_PROGRESS));
         }
         return notification;
     }
 
-    // Method for sending notification
+    // A method that sends a notification
     private void sendNotification(int progress) {
         Intent intent = new Intent(NOTIFICATION);
         intent.putExtra(PROGRESS, progress);
@@ -120,5 +120,4 @@ public class AxDownloadService extends DownloadService {
             NotificationUtil.setNotification(context, nextNotificationId++, notification);
         }
     }
-
 }

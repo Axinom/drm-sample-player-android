@@ -44,11 +44,11 @@ public class PlayerActivity extends Activity implements DemoPlayer.Listener {
   private String mWidevineLicenseServer;
   // License token is sent together with license request to get a license
   private String mLicenseToken;
-  // boolean to determine if online or offline source should be used for playback
+  // Boolean to determine if online or offline source should be used for playback
   private boolean mShouldPlayOffline;
-  // save last playback position on suspend
+  // Save last playback position on suspend
   private long mPlayerPosition;
-  // boolean to determine whether playback should automatically start when player is prepared
+  // Boolean to determine whether playback should automatically start when player is prepared
   private boolean mPlayerStartOnPrepared;
 
   private static final CookieManager sDefaultCookieManager;
@@ -77,7 +77,7 @@ public class PlayerActivity extends Activity implements DemoPlayer.Listener {
     handleIntent(getIntent());
   }
 
-  // method to obtain data (content URI, license token and server URL) from intent used to start this Activity
+  // A method to obtain data (content URI, license token and server URL) from intent used to start this Activity
   private void handleIntent(Intent intent){
     Log.d(TAG, "handleIntent() called with: intent = [" + intent + "]");
     mContentUri = intent.getData();
@@ -103,7 +103,7 @@ public class PlayerActivity extends Activity implements DemoPlayer.Listener {
     restorePlayer();
   }
 
-  // method for restoring the player (should be called when application is resumed from minimized state for example)
+  // A method for restoring the player (should be called when application is resumed from minimized state for example)
   private void restorePlayer() {
     Log.d(TAG, "restorePlayer() called");
     if (mPlayer == null) {
@@ -126,13 +126,12 @@ public class PlayerActivity extends Activity implements DemoPlayer.Listener {
     releasePlayer();
   }
 
-
   // Permission request listener method
   @Override
   public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions,
                                          @NonNull int[] grantResults) {
     if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-      // prepare player if permissions are granted
+      // Prepare player if permissions are granted
       preparePlayer();
     } else {
       Toast.makeText(getApplicationContext(), R.string.storage_permission_denied,
@@ -168,10 +167,10 @@ public class PlayerActivity extends Activity implements DemoPlayer.Listener {
             != PackageManager.PERMISSION_GRANTED;
   }
 
-  // method for preparing the player
+  // A method for preparing the player
   private void preparePlayer() {
     Log.d(TAG, "preparePlayer() called");
-    // add parameters for player
+    // Add parameters for player
     DemoPlayer.Params params = new DemoPlayer.Params();
     params.contentUri = mContentUri;
     params.axDrmMessage = mLicenseToken;
@@ -179,7 +178,8 @@ public class PlayerActivity extends Activity implements DemoPlayer.Listener {
     params.startPosition = mPlayerPosition;
     params.startOnPrepared = mPlayerStartOnPrepared;
     params.shouldPlayOffline = mShouldPlayOffline;
-    // if player is not existing, create a new instance of it and prepare
+    
+    // If player is not existing, create a new instance of it and prepare
     if (mPlayer == null) {
       mPlayer = new DemoPlayer(this);
       mPlayer.addListener(this);
@@ -187,7 +187,7 @@ public class PlayerActivity extends Activity implements DemoPlayer.Listener {
     }
   }
 
-  // method for releasing the player (should be called when application is closed or minimized for example)
+  // A method for releasing the player (should be called when application is closed or minimized for example)
   private void releasePlayer() {
     Log.d(TAG, "releasePlayer() called");
     if (mPlayer != null) {
@@ -264,5 +264,4 @@ public class PlayerActivity extends Activity implements DemoPlayer.Listener {
     AlertDialog alertDialog = alertDialogBuilder.create();
     alertDialog.show();
   }
-
 }

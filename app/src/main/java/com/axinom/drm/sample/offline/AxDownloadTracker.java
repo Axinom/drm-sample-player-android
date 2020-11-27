@@ -31,10 +31,10 @@ import java.util.concurrent.CopyOnWriteArraySet;
  */
 public class AxDownloadTracker {
 
-    /** Listens for changes in the tracked downloads. */
+    // Listens for changes in the tracked downloads
     public interface Listener {
 
-        /** Called when the tracked downloads changed. */
+        // Called when the tracked downloads changed
         void onDownloadsChanged(int state);
     }
 
@@ -70,16 +70,16 @@ public class AxDownloadTracker {
         }
     }
 
-    // get the overrides for renderer
+    // Get the overrides for renderer
     private List<DefaultTrackSelector.SelectionOverride> getRendererOverrides(int periodIndex, int rendererIndex, int[][] representations) {
 
         List<DefaultTrackSelector.SelectionOverride> overrides = new ArrayList<>();
-        // if representations is null then all tracks are downloaded
+        // If representations is null then all tracks are downloaded
         if (representations != null) {
             for (int[] indexes : representations) {
-                // for every track specification in the list check if we have the correct period and renderer
+                // For every track specification in the list check if we have the correct period and renderer
                 if (periodIndex == indexes[0] && rendererIndex == indexes[1]) {
-                    // add a selection override for this renderer by specifying groupindex and trackindex
+                    // Add a selection override for this renderer by specifying groupindex and trackindex
                     overrides.add(new DefaultTrackSelector.SelectionOverride(indexes[2], indexes[3]));
                 }
             }
@@ -99,27 +99,27 @@ public class AxDownloadTracker {
      */
     public void download(String description, int[][] representations) {
 
-        // search through all the periods
+        // Search through all periods
         for (int periodIndex = 0; periodIndex < mDownloadHelper.getPeriodCount(); periodIndex++) {
 
-            // get the mapped track info for this period
+            // Get the mapped track info for this period
             MappingTrackSelector.MappedTrackInfo mappedTrackInfo = mDownloadHelper.getMappedTrackInfo(periodIndex);
 
-            // clear any default selections
+            // Clear any default selections
             mDownloadHelper.clearTrackSelections(periodIndex);
 
-            // look through all the renderers
+            // Look through all renderers
             for (int rendererIndex = 0; rendererIndex < mappedTrackInfo.getRendererCount(); rendererIndex++) {
                 mDownloadHelper.addTrackSelectionForSingleRenderer(
                         periodIndex,
                         rendererIndex,
                         DownloadHelper.getDefaultTrackSelectorParameters(mContext),
-                        // get the track selection overrides for this renderer
+                        // Get the track selection overrides for this renderer
                         getRendererOverrides(periodIndex, rendererIndex, representations));
             }
         }
 
-        // create a DownloadRequest and send it to service
+        // Create a DownloadRequest and send it to service
         DownloadRequest downloadRequest = mDownloadHelper.getDownloadRequest(Util.getUtf8Bytes(description));
         DownloadService.sendAddDownload(
                 mContext,
@@ -137,7 +137,7 @@ public class AxDownloadTracker {
         mListeners.remove(listener);
     }
 
-    // boolean for determining whether video is downloaded or not
+    // Boolean for determining whether video is downloaded or not
     public boolean isDownloaded(String url) {
         Download download = mDownloads.get(Uri.parse(url));
         return download != null && download.state == Download.STATE_COMPLETED;
@@ -187,7 +187,7 @@ public class AxDownloadTracker {
         }
     }
 
-    // For listening download changes and sending callbacks notifying about it
+    // For listening download changes and sending callbacks notifying about them
     private class DownloadManagerListener implements DownloadManager.Listener {
 
         @Override
