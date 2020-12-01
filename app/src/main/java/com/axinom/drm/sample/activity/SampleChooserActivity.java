@@ -50,7 +50,9 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 
-// An activity for selecting samples.
+/**
+ *	An activity for selecting samples.
+ */
 public class SampleChooserActivity extends Activity implements View.OnClickListener,
 		IOfflineLicenseManagerListener, DownloadHelper.Callback, AxDownloadTracker.Listener {
 
@@ -125,7 +127,7 @@ public class SampleChooserActivity extends Activity implements View.OnClickListe
 		}
 	}
 
-	// Method for checking whether network is available
+	// A method for checking whether network is available
 	private boolean isNetworkAvailable() {
 		ConnectivityManager connectivityManager
 				= (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
@@ -166,7 +168,7 @@ public class SampleChooserActivity extends Activity implements View.OnClickListe
 		mButtonRemoveLicense = findViewById(R.id.main_button_remove_license);
 		mButtonRemoveAll = findViewById(R.id.main_button_remove_all);
 
-		// initializing of OfflineLicenseManager
+		// Initializing the OfflineLicenseManager
 		mLicenseManager = new OfflineLicenseManager(this);
 
 		requestPermissions();
@@ -220,43 +222,43 @@ public class SampleChooserActivity extends Activity implements View.OnClickListe
 		}
 	}
 
-	// returns MediaItem from the MediaItems list at the specified position
+	// Returns MediaItem from the MediaItems list at the specified position
 	private MediaItem getMediaItem(int position) {
 		return mMediaItems.get(position);
 	}
 
-	// returns currently selected MediaItem from the MediaItems list
+	// Returns currently selected MediaItem from the MediaItems list
 	private MediaItem getSelectedMediaItem() {
 		return mMediaItems.get(mSelectedVideo);
 	}
 
-	// method for checking current download status and updating accordingly UI accordingly
+	// A method for checking current download status and updating UI accordingly
 	private void checkCurrentDownloadStatus() {
 		if (mAxDownloadTracker != null && mSelectedVideo >= 0) {
 			// If currently selected video is downloaded:
 			if (mAxDownloadTracker.isDownloaded(getSelectedMediaItem().videoUrl)) {
-				// hide the "Download" button
+				// Hide the "Download" button
 				mButtonDownload.setVisibility(View.GONE);
-				// show the "Delete" button
+				// Show the "Delete" button
 				mButtonDelete.setVisibility(View.VISIBLE);
-				// check if license is also valid for that selected video
+				// Check if license is also valid for that selected video
 				mLicenseManager.checkLicenseValid(getSelectedMediaItem().videoUrl);
 			} else {
 				// If currently selected video is not downloaded show the "Download" button
 				mButtonDownload.setVisibility(View.VISIBLE);
-				// hide the "Delete" button
+				// Hide the "Delete" button
 				mButtonDelete.setVisibility(View.GONE);
-				// hide the "Request license" button
+				// Hide the "Request license" button
 				mButtonSave.setVisibility(View.GONE);
-				// hide the "Play offline" button
+				// Hide the "Play offline" button
 				mButtonPlayOffline.setVisibility(View.GONE);
-				// hide the "Remove license" button
+				// Hide the "Remove license" button
 				mButtonRemoveLicense.setVisibility(View.GONE);
-				// hide the "Remove all licenses" button
+				// Hide the "Remove all licenses" button
 				mButtonRemoveAll.setVisibility(View.GONE);
-				// change offline availability text color to red for indicating an issue
+				// Change offline availability text color to red to indicate an issue
 				mOfflineAvailability.setTextColor(Color.RED);
-				// set text to offline availability TextView to show that selected video is not downloaded
+				// Set text to offline availability TextView to show that selected video is not downloaded
 				mOfflineAvailability.setText(getResources().getString(R.string.not_available_offline_not_downloaded));
 			}
 		}
@@ -268,7 +270,7 @@ public class SampleChooserActivity extends Activity implements View.OnClickListe
 		if (mAxDownloadTracker != null) {
 			mAxDownloadTracker.addListener(this);
 		}
-		// if MediaList is empty then fill it with sample videos
+		// If MediaList is empty then fill it with sample videos
 		if (mMediaItems.size() == 0) {
 			fillListWithSamples(getLocalSampleList());
 		}
@@ -293,7 +295,8 @@ public class SampleChooserActivity extends Activity implements View.OnClickListe
 		mButtonRemoveLicense.setOnClickListener(this);
 		mButtonRemoveAll.setOnClickListener(this);
 		mLicenseManager.setEventListener(this);
-		// registering receiver for download progress
+		
+		// Registering receiver for download progress
 		registerReceiver(mBroadcastReceiver, new IntentFilter(
 				AxDownloadService.NOTIFICATION));
 		checkCurrentDownloadStatus();
@@ -313,7 +316,8 @@ public class SampleChooserActivity extends Activity implements View.OnClickListe
 			mLicenseManager.setEventListener(null);
 			mLicenseManager.release();
 		}
-		// unregistering receiver for download progress
+		
+		// Unregistering receiver for download progress
 		unregisterReceiver(mBroadcastReceiver);
 		mDownloadProgress.setVisibility(View.GONE);
 	}
@@ -339,39 +343,39 @@ public class SampleChooserActivity extends Activity implements View.OnClickListe
 
 	// Called when "Delete" button is pressed
 	private void onDeletePressed() {
-		// license is removed for the selected video
+		// License is removed for the selected video
 		onRemoveLicense();
 		Uri uri = Uri.parse(getSelectedMediaItem().videoUrl);
-		// removes a download
+		// Removes a download
 		DownloadService.sendRemoveDownload(
 				this, AxDownloadService.class, mAxDownloadTracker.getDownloadRequest(uri).id, false);
 	}
 
 	// Called when "Remove all licenses" button is pressed
 	private void onRemoveAllLicenses() {
-		// all saved licenses are removed
+		// All saved licenses are removed
 		mLicenseManager.releaseAllLicenses();
 	}
 
 	// Called when "Remove license" button is pressed or as a first step of deleting a downloaded video
 	private void onRemoveLicense() {
-		// license is removed for the selected video
+		// License is removed for the selected video
 		mLicenseManager.releaseLicense(getSelectedMediaItem().videoUrl);
 	}
 
 	// Called when "Download" button is pressed
 	private void onDownloadPressed() {
-		// first, network availability is determined to proceed
+		// First, network availability is determined to proceed
 		if (!isNetworkAvailable()) {
 			Toast.makeText(getApplicationContext(),
 					R.string.error_no_connection_for_downloading, Toast.LENGTH_LONG).show();
 			return;
 		}
-		// download license
+		// Download a license
 		downloadLicenseWithResult();
 
 		Uri uri = Uri.parse(getSelectedMediaItem().videoUrl);
-		// prepare DownloadHelper
+		// Prepare DownloadHelper
 		if (mDownloadHelper != null) {
 			mDownloadHelper.release();
 			mDownloadHelper = null;
@@ -385,9 +389,9 @@ public class SampleChooserActivity extends Activity implements View.OnClickListe
 		}
 	}
 
-	// Method for downloading license
+	// A method for downloading a license
 	private void downloadLicenseWithResult() {
-		// result is handled in the OfflineLicenseManager class
+		// Result is handled in the OfflineLicenseManager class
 		mLicenseManager.downloadLicenseWithResult(
 				getSelectedMediaItem().licenseServer,
 				getSelectedMediaItem().videoUrl,
@@ -408,11 +412,11 @@ public class SampleChooserActivity extends Activity implements View.OnClickListe
 
 	// Called when "Request license" button is pressed
 	private void onSavePressed() {
-		// download license for the selected video
+		// Download license for the selected video
 		downloadLicense();
 	}
 
-	// method for downloading license for currently selected video
+	// A method for downloading license for currently selected video
 	private void downloadLicense() {
 		mLicenseManager.downloadLicense(getSelectedMediaItem().licenseServer,
 				getSelectedMediaItem().videoUrl, getSelectedMediaItem().licenseToken);
@@ -422,7 +426,7 @@ public class SampleChooserActivity extends Activity implements View.OnClickListe
 		Toast.makeText(this, errorMessage, Toast.LENGTH_LONG).show();
 	}
 
-	// method for converting local sample videos list to JSONArray
+	// A method for converting local sample videos list to JSONArray
 	private JSONArray getLocalSampleList() {
 		JSONArray jsonArray;
 		try {
@@ -441,7 +445,7 @@ public class SampleChooserActivity extends Activity implements View.OnClickListe
 		return jsonArray;
 	}
 
-	// method for filling video URL-s and video names lists with sample data
+	// A method for filling video URL-s and video names lists with sample data
 	private void fillListWithSamples(JSONArray jsonArray) {
 		if (jsonArray != null) {
 			for (int i = 0; i < jsonArray.length(); i++) {
@@ -457,7 +461,7 @@ public class SampleChooserActivity extends Activity implements View.OnClickListe
 					e.printStackTrace();
 				}
 			}
-			// if MediaList is empty then hide the "Play" button and alert the user about it
+			// If MediaList is empty then hide the "Play" button and alert the user about it
 			if (mMediaItems.size() == 0) {
 				mButtonPlay.setVisibility(View.GONE);
 				Toast.makeText(getApplicationContext(),
@@ -468,7 +472,7 @@ public class SampleChooserActivity extends Activity implements View.OnClickListe
 		}
 	}
 
-	// method for starting activity for the playback of currently selected video
+	// A method for starting activity for the playback of currently selected video
 	private void startVideoActivity(int position, boolean shouldPlayOffline) {
 		Intent intent = new Intent(this, PlayerActivity.class);
 		intent.setData(Uri.parse(getMediaItem(position).videoUrl));
@@ -478,7 +482,7 @@ public class SampleChooserActivity extends Activity implements View.OnClickListe
 		startActivity(intent);
 	}
 
-	// method for generating list of tracks to download
+	// A method for generating list of tracks to download
 	private int[][] getTracks() {
 		ArrayList<int[]> tracks = new ArrayList<>();
 
@@ -500,7 +504,7 @@ public class SampleChooserActivity extends Activity implements View.OnClickListe
 					TrackGroup trackGroup = trackGroupArray.get(group);
 					// Finally search through tracks (representations)
 					for (int track = 0; track < trackGroup.length; track++) {
-						// for videos we only care about the max bitrate track that is available
+						// For videos we only care about the max bitrate track that is available
 						if (isVideoRenderer && trackGroup.getFormat(track).bitrate > maxBitrate) {
 							maxBitrate = trackGroup.getFormat(track).bitrate;
 							videoTrackIndex = track;
@@ -512,7 +516,7 @@ public class SampleChooserActivity extends Activity implements View.OnClickListe
 					if (isVideoRenderer) {
 						int [] indexes = new int[] { period, renderer, group, videoTrackIndex };
 						tracks.add(indexes);
-						break; // found a video, currently not interested in other video groups
+						break; // Found a video, currently not interested in other video groups
 					}
 				}
 			}
@@ -528,16 +532,16 @@ public class SampleChooserActivity extends Activity implements View.OnClickListe
 		return tracksToDownload;
 	}
 
-	// called when DownloadHelper is prepared for download
+	// Called when DownloadHelper is prepared for download
 	@Override
 	public void onPrepared(@NonNull DownloadHelper helper) {
-		// generate the list of tracks to download
+		// Generate the list of tracks to download
 		int [][] tracks = getTracks();
-		// download the currently selected video
+		// Download the currently selected video
 		mAxDownloadTracker.download(getSelectedMediaItem().title, tracks);
 	}
 
-	// called when preparation of DownloadHelper failed
+	// Called when preparation of DownloadHelper failed
 	@Override
 	public void onPrepareError(@NonNull DownloadHelper helper, @NonNull IOException e) {
 		Toast.makeText(this, "Error when preparing download", Toast.LENGTH_SHORT).show();
@@ -546,21 +550,21 @@ public class SampleChooserActivity extends Activity implements View.OnClickListe
 		Log.e(TAG, "Failed to start download", e);
 	}
 
-	// called when license is downloaded
+	// Called when license is downloaded
 	@Override
 	public void onLicenseDownloaded(String manifestUrl) {
 		Toast.makeText(SampleChooserActivity.this, "License saved", Toast.LENGTH_SHORT).show();
 		checkCurrentDownloadStatus();
 	}
 
-	// called when license is downloaded with a result containing offline license keyIds
+	// Called when license is downloaded with a result containing offline license keyIds
 	@Override
 	public void onLicenseDownloadedWithResult(String manifestUrl, byte[] keyIds) {
 		Toast.makeText(SampleChooserActivity.this, "License saved", Toast.LENGTH_SHORT).show();
 		checkCurrentDownloadStatus();
 	}
 
-	// called when license download failed
+	// Called when license download failed
 	@Override
 	public void onLicenseDownloadFailed(int code, String description, String manifestUrl) {
 		Toast.makeText(SampleChooserActivity.this, "License download error: " + code + " : " + description,
@@ -568,7 +572,7 @@ public class SampleChooserActivity extends Activity implements View.OnClickListe
 		checkCurrentDownloadStatus();
 	}
 
-	// called when the validity of license is checked
+	// Called when the validity of license is checked
 	@Override
 	public void onLicenseCheck(boolean isValid, String manifestUrl) {
 		if (isValid) {
@@ -588,7 +592,7 @@ public class SampleChooserActivity extends Activity implements View.OnClickListe
 		}
 	}
 
-	// called when the validity of license check fails
+	// Called when the validity of license check fails
 	@Override
 	public void onLicenseCheckFailed(int code, String description, String manifestUrl) {
 		mButtonSave.setVisibility(View.VISIBLE);
@@ -599,14 +603,14 @@ public class SampleChooserActivity extends Activity implements View.OnClickListe
 		mOfflineAvailability.setText(getResources().getString(R.string.not_available_offline_license_check_error));
 	}
 
-	// called when license of a video is released
+	// Called when license of a video is released
 	@Override
 	public void onLicenseReleased(String manifestUrl) {
 		Toast.makeText(SampleChooserActivity.this, "License released", Toast.LENGTH_SHORT).show();
 		checkCurrentDownloadStatus();
 	}
 
-	// called when license release fails
+	// Called when license release fails
 	@Override
 	public void onLicenseReleaseFailed(int code, String description, String manifestUrl) {
 		Toast.makeText(SampleChooserActivity.this, "License remove error: " + code + " : " + description,
@@ -614,14 +618,14 @@ public class SampleChooserActivity extends Activity implements View.OnClickListe
 		checkCurrentDownloadStatus();
 	}
 
-	// called when license keys are restored
+	// Called when license keys are restored
 	@Override
 	public void onLicenseKeysRestored(String manifestUrl, byte[] keyIds) {
 		Toast.makeText(SampleChooserActivity.this, "License restored", Toast.LENGTH_SHORT).show();
 		checkCurrentDownloadStatus();
 	}
 
-	// called when license keys of a video are restored
+	// Called when license keys of a video are restored
 	@Override
 	public void onLicenseRestoreFailed(int code, String description, String manifestUrl) {
 		Toast.makeText(SampleChooserActivity.this, "License restore error: " + code + " : " + description,
@@ -629,14 +633,14 @@ public class SampleChooserActivity extends Activity implements View.OnClickListe
 		checkCurrentDownloadStatus();
 	}
 
-	// called when all saved licenses are released
+	// Called when all saved licenses are released
 	@Override
 	public void onAllLicensesReleased() {
 		Toast.makeText(SampleChooserActivity.this, "All Licenses released", Toast.LENGTH_SHORT).show();
 		checkCurrentDownloadStatus();
 	}
 
-	// called when releasing of all saved licenses fails
+	// Called when releasing of all saved licenses fails
 	@Override
 	public void onAllLicensesReleaseFailed(int code, String description) {
 		Toast.makeText(SampleChooserActivity.this, "All Licenses release error: " + code + " : " + description,
@@ -644,21 +648,19 @@ public class SampleChooserActivity extends Activity implements View.OnClickListe
 		checkCurrentDownloadStatus();
 	}
 
-	// called when download state changes
+	// Called when download state changes
 	@Override
 	public void onDownloadsChanged(int state) {
 		if (state == Download.STATE_COMPLETED || state == Download.STATE_FAILED
 				|| state == Download.STATE_REMOVING) {
-			// if download state is in "STATE_DOWNLOADING" then TextView for showing the progress is made visible
-			// if download has finished by it being completed "STATE_COMPLETED", failed "STATE_FAILED"
-			// or removed "STATE_REMOVING" then hide download progress TextView and update current
-			// download status
+			// If download state is in "STATE_DOWNLOADING" then TextView for showing the progress is made visible.
+			// If download has finished by it being completed "STATE_COMPLETED", failed "STATE_FAILED"
+			// or removed "STATE_REMOVING" then hide download progress TextView and update current download status
 			mDownloadProgress.setVisibility(View.GONE);
 			checkCurrentDownloadStatus();
 		} else if (state == Download.STATE_DOWNLOADING) {
-			// if download state is in "STATE_DOWNLOADING" then TextView for showing the progress is made visible
+			// If download state is in "STATE_DOWNLOADING" then TextView for showing the progress is made visible
 			mDownloadProgress.setVisibility(View.VISIBLE);
 		}
 	}
-
 }
