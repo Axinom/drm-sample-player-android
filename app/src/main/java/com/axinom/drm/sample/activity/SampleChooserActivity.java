@@ -433,7 +433,7 @@ public class SampleChooserActivity extends Activity implements View.OnClickListe
 			InputStream inputStream = getAssets().open("samplelist.json");
 			int size = inputStream.available();
 			byte[] buffer = new byte[size];
-			// noinspection ResultOfMethodCallIgnored
+			//noinspection ResultOfMethodCallIgnored
 			inputStream.read(buffer);
 			inputStream.close();
 			String jsonString = new String(buffer, StandardCharsets.UTF_8);
