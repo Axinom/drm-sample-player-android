@@ -2,6 +2,13 @@
 
 This is an Android application that plays back DASH videos protected using Axinom DRM. This app also includes the option to download DASH videos and to play them offline.
 
+## Installing the application
+
+This application can be downloaded from App Center by either navigating to the [website](https://install.appcenter.ms/orgs/ax/apps/axinom-drm-sample-player-1/distribution_groups/public) directly or by scanning this QR code with your device:  
+![](Images/qr_code.png)
+
+It is also important to keep in mind that the installation of apps from unknown sources has to be allowed on your device. If it is not allowed, then you will be prompted to do that during the installation process.
+
 # Project structure
 
 This project uses [ExoPlayer](https://github.com/google/ExoPlayer) to playback DASH videos protected using Axinom DRM and is based on the ExoPlayer sample code.  
