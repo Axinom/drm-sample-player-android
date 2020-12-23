@@ -1,34 +1,31 @@
 # Axinom DRM Sample Player with offline playback support
 
-This is an Android application that plays back DASH videos protected using Axinom DRM. This app also includes the option to download DASH videos and to play them offline.
+This is a sample project of an Android video player application. Its purpose is to provide a starting point for developers who want to implement a player application that includes support for Axinom DRM and offline playback.
 
-## Installing the application
+The application uses [ExoPlayer](https://github.com/google/ExoPlayer) to play MPEG-DASH streams protected using Axinom DRM. Additionally, it supports offline playback and implements functionality for downloading protected streams and persisting DRM licenses for later use.
 
-This application can be downloaded from App Center by either navigating to the [website](https://install.appcenter.ms/orgs/ax/apps/axinom-drm-sample-player-1/distribution_groups/public) directly or by scanning this QR code with your device:  
-![](Images/qr_code.png)
+The application itself can be used for demonstration and testing purposes of the mentioned features. Details about the integration of Axinom DRM can be found in the source code. It contains explanatory comments and can be used as a development guide in addition to this README.
 
-It is also important to keep in mind that the installation of apps from unknown sources has to be allowed on your device. If it is not allowed, then you will be prompted to do that during the installation process.
 
-# Project structure
+# Important files
 
-This project uses [ExoPlayer](https://github.com/google/ExoPlayer) to playback DASH videos protected using Axinom DRM and is based on the ExoPlayer sample code.  
-Also, a library is included in the project named [axlicense.aar](app/libs/axlicense-3.4.19352.1.aar/) which takes care of downloading the licenses, checking their validity, and restoring the licenses for offline playback.
+Here is a list of more important files in the project that have a key role in Axinom DRM integration and the offline playback support.
 
-## Important files
+[axlicense.aar](app/libs/axlicense-3.4.19352.1.aar/)
+* A library included in the project which helps with downloading the licenses, checking their validity, and restoring the licenses for offline playback.
+
 
 [SampleChooserActivity.java](app/src/main/java/com/axinom/drm/sample/activity/SampleChooserActivity.java)
-
-* Loads sample videos from [samplelist.json](app/src/main/assets/samplelist.json).  
+* A class that loads sample videos from [samplelist.json](app/src/main/assets/samplelist.json).  
 This json file can be modified to add your own sample videos for the application to use.  
 More information about it in ["Adding sample videos"](#adding-sample-videos) chapter below.
-* Gives users the possibility to either play videos online or download the videos and play them offline.  
-See ["How to use the application"](#how-to-use-the-application) chapter below for more details.
+* Also gives users the possibility to either play videos online or download the videos and play them offline.  
+See ["Offline mode"](#offline-mode) chapter below for more details about offline playback support or ["How to use the application"](#how-to-use-the-application) chapter about using the application.
 
 
 [DemoPlayer.java](app/src/main/java/com/axinom/drm/sample/player/DemoPlayer.java)
-
-See *buildDrmSessionManager()* method which
-* Attaches the license token to license requests.
+* A wrapper class around ExoPlayer which tries to play content offline if required.
+* For Axinom DRM integration it is important to see the *buildDrmSessionManager()* method which attaches license token to license requests.
 
 
 [AxDownloadService.java](app/src/main/java/com/axinom/drm/sample/offline/AxDownloadService.java)
@@ -36,16 +33,12 @@ See *buildDrmSessionManager()* method which
 
 
 [AxDownloadTracker.java](app/src/main/java/com/axinom/drm/sample/offline/AxDownloadTracker.java)
-* A class that manages the downloads: initializes the download requests, enables to select tracks for downloading, and listens for events where download status changed.
+* A class that manages the downloads: initializes the download requests, enables to select tracks for download, and listens for events where download status changed.
 
 
 [AxOfflineManager.java](app/src/main/java/com/axinom/drm/sample/offline/AxOfflineManager.java)
 * A class that manages the initialization of Exoplayer's DownloadManager and data source factory objects.
 
-
-## Other major components
-
-ExoPlayer demo application code is in the [player](app/src/main/java/com/axinom/drm/sample/player) package and is largely irrelevant to the functioning of Axinom DRM.
 
 # Device compatibility
 
@@ -56,6 +49,8 @@ This project is compatible with devices running Android 4.4 or newer.
 1. Open Android Studio and connect an Android 4.4 (or newer) device to a computer.
 2. Clone or download this repository and open the project in Android Studio.
 3. Run the application by selecting *Run -> Run 'app'* from the Android Studio menu bar.
+
+The application can also be downloaded from App Center. More information about this in ["Downloading the application"](#downloading-the-application) chapter below.
 
 # How to use the application
 
@@ -106,8 +101,8 @@ Keys to provide value for are the following:
 
 It is possible to download both non-protected and DRM-protected videos and play them offline.
 
-The library takes care of downloading the licenses, checking their validity, and restoring the licenses for offline playback.  
-To play DRM videos in offline mode, player library needs to save the persistent license keys on the device's internal storage.  
+The axlicense library takes care of downloading the licenses, checking their validity, and restoring the licenses for offline playback.  
+To play DRM videos in offline mode, the library needs to save the persistent license keys on the device's internal storage.  
 To preserve an offline license, `"allow_persistence": true` flag needs to be present inside the DRM token.
 
 To download licenses, **OfflineLicenseManager** class is used.  
@@ -118,7 +113,7 @@ In general, the responsibilities of the OfflineLicenseManager class are:
 * Checking license validity
 * Update expired licenses
 * Restoring the license for offline playback
-* Dispatch completion events which contain information about completion results (success or failure)
+* Dispatch completion events that contain information about completion results (success or failure)
 
 In order to be able to download media the following steps should be followed:
 
@@ -174,3 +169,10 @@ public void onPrepareError(DownloadHelper helper, IOException e) {
     ...
 }
 </code></pre>
+
+## Downloading the application
+
+This application can be downloaded from App Center by either navigating to the [website](https://install.appcenter.ms/orgs/ax/apps/axinom-drm-sample-player-1/distribution_groups/public) directly or by scanning this QR code with your device:  
+![](Images/qr_code.png)
+
+It is also important to keep in mind that the installation of apps from unknown sources has to be allowed on your device. If it is not allowed, then you will be prompted to do that during the installation process.
