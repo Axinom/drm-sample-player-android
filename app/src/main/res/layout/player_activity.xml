@@ -14,12 +14,80 @@
       app:show_buffering="when_playing"
       app:show_shuffle_button="true"/>
 
-  <TextView
-      android:id="@+id/player_playback_source"
-      android:layout_width="wrap_content"
-      android:layout_height="wrap_content"
-      android:layout_margin="@dimen/player_playback_source_text_margin"
-      android:textColor="#FF0000"
-      android:textSize="@dimen/welcome_page_font_size"/>
+  <FrameLayout
+      android:layout_width="match_parent"
+      android:layout_height="match_parent"
+      android:layout_marginTop="@dimen/player_console_vertical_margin"
+      android:layout_marginBottom="@dimen/player_console_vertical_margin">
+
+    <Button
+        android:id="@+id/player_console_button"
+        android:layout_width="@dimen/player_console_button_width"
+        android:layout_height="@dimen/player_console_button_height"
+        android:layout_gravity="top|start"
+        android:background="@color/player_console_button_color"
+        android:text="@string/player_console_button_text"/>
+
+    <Button
+        android:id="@+id/player_delete_button"
+        android:layout_width="@dimen/player_console_button_width"
+        android:layout_height="@dimen/player_console_button_height"
+        android:layout_gravity="bottom|start"
+        android:background="@color/player_console_button_color"
+        android:text="@string/player_delete_button_text"/>
+
+    <FrameLayout
+        android:id="@+id/player_console_output_frame"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_marginStart="@dimen/player_console_horizontal_margin"
+        android:layout_marginEnd="@dimen/player_console_horizontal_margin"
+        android:background="@color/player_console_bg_color">
+
+      <ScrollView
+          android:id="@+id/player_console_output_scrollview"
+          android:layout_width="wrap_content"
+          android:layout_height="wrap_content">
+
+        <TextView
+            android:id="@+id/player_console_output_text"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:padding="@dimen/player_console_output_text_padding"
+            android:textColor="@color/player_console_text_color"
+            android:textSize="@dimen/player_console_output_text_size"/>
+
+      </ScrollView>
+
+      <LinearLayout
+          android:layout_width="wrap_content"
+          android:layout_height="wrap_content"
+          android:layout_gravity="top|end"
+          android:layout_margin="@dimen/player_console_copy_layout_margin"
+          android:orientation="horizontal">
+
+        <Button
+            android:id="@+id/player_console_copy_button"
+            android:layout_width="@dimen/player_console_copy_button_width"
+            android:layout_height="@dimen/player_console_copy_button_height"
+            android:background="@color/player_console_button_color"
+            android:text="@string/player_console_copy_button_text"/>
+
+        <View
+            android:layout_width="@dimen/player_console_copy_layout_margin"
+            android:layout_height="match_parent"/>
+
+        <Button
+            android:id="@+id/player_console_clear_button"
+            android:layout_width="@dimen/player_console_copy_button_width"
+            android:layout_height="@dimen/player_console_copy_button_height"
+            android:background="@color/player_console_button_color"
+            android:text="@string/player_console_clear_button_text"/>
+
+      </LinearLayout>
+
+    </FrameLayout>
+
+  </FrameLayout>
 
 </FrameLayout>

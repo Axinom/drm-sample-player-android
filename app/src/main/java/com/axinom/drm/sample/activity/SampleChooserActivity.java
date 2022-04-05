@@ -25,20 +25,23 @@ import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.axinom.axlicense.OfflineLicenseManager;
-import com.axinom.axlicense.interfaces.IOfflineLicenseManagerListener;
 import com.axinom.drm.sample.R;
-import com.axinom.drm.sample.model.MediaItem;
+import com.axinom.drm.sample.license.OfflineLicenseManager;
+import com.axinom.drm.sample.license.interfaces.IOfflineLicenseManagerListener;
 import com.axinom.drm.sample.offline.AxDownloadService;
 import com.axinom.drm.sample.offline.AxDownloadTracker;
 import com.axinom.drm.sample.offline.AxOfflineManager;
 import com.axinom.drm.sample.player.PlayerActivity;
+import com.axinom.drm.sample.util.Utility;
+import com.google.android.exoplayer2.MediaItem;
+import com.google.android.exoplayer2.MediaMetadata;
 import com.google.android.exoplayer2.offline.Download;
 import com.google.android.exoplayer2.offline.DownloadHelper;
 import com.google.android.exoplayer2.offline.DownloadService;
 import com.google.android.exoplayer2.source.TrackGroup;
 import com.google.android.exoplayer2.source.TrackGroupArray;
 import com.google.android.exoplayer2.trackselection.MappingTrackSelector;
+import com.google.android.exoplayer2.util.Util;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -49,6 +52,8 @@ import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  *	An activity for selecting samples.
@@ -207,7 +212,7 @@ public class SampleChooserActivity extends Activity implements View.OnClickListe
 		public void onBindViewHolder(@NonNull SampleAdapter.ViewHolder holder, int position) {
 			holder.itemView.setOnClickListener(this);
 			if (getItemCount() > 0) {
-				((TextView)holder.itemView).setText(getMediaItem(position).title);
+				((TextView)holder.itemView).setText(getMediaItem(position).mediaMetadata.title);
 				if (position == 0 &&  mSelectedVideo == -1) {
 					mSelectedVideo = 0;
 					holder.itemView.setBackgroundColor(Color.LTGRAY);
@@ -236,13 +241,25 @@ public class SampleChooserActivity extends Activity implements View.OnClickListe
 	private void checkCurrentDownloadStatus() {
 		if (mAxDownloadTracker != null && mSelectedVideo >= 0) {
 			// If currently selected video is downloaded:
-			if (mAxDownloadTracker.isDownloaded(getSelectedMediaItem().videoUrl)) {
+			if (mAxDownloadTracker.isDownloaded(
+					String.valueOf(Utility.getPlaybackProperties(getSelectedMediaItem()).uri))) {
 				// Hide the "Download" button
 				mButtonDownload.setVisibility(View.GONE);
 				// Show the "Delete" button
 				mButtonDelete.setVisibility(View.VISIBLE);
-				// Check if license is also valid for that selected video
-				mLicenseManager.checkLicenseValid(getSelectedMediaItem().videoUrl);
+				// If the selected video is protected, check if the license is also valid
+				if (Utility.getDrmConfiguration(getSelectedMediaItem()) != null) {
+					mLicenseManager.checkLicenseValid(String.valueOf(
+							Utility.getPlaybackProperties(getSelectedMediaItem()).uri));
+				} else {
+					mButtonSave.setVisibility(View.GONE);
+					mButtonPlayOffline.setVisibility(View.VISIBLE);
+					mButtonRemoveLicense.setVisibility(View.GONE);
+					mButtonRemoveAll.setVisibility(View.GONE);
+					mOfflineAvailability.setTextColor(Color.GREEN);
+					mOfflineAvailability.setText(
+							getResources().getString(R.string.available_offline_not_protected));
+				}
 			} else {
 				// If currently selected video is not downloaded show the "Download" button
 				mButtonDownload.setVisibility(View.VISIBLE);
@@ -295,7 +312,7 @@ public class SampleChooserActivity extends Activity implements View.OnClickListe
 		mButtonRemoveLicense.setOnClickListener(this);
 		mButtonRemoveAll.setOnClickListener(this);
 		mLicenseManager.setEventListener(this);
-		
+
 		// Registering receiver for download progress
 		registerReceiver(mBroadcastReceiver, new IntentFilter(
 				AxDownloadService.NOTIFICATION));
@@ -316,7 +333,7 @@ public class SampleChooserActivity extends Activity implements View.OnClickListe
 			mLicenseManager.setEventListener(null);
 			mLicenseManager.release();
 		}
-		
+
 		// Unregistering receiver for download progress
 		unregisterReceiver(mBroadcastReceiver);
 		mDownloadProgress.setVisibility(View.GONE);
@@ -345,13 +362,12 @@ public class SampleChooserActivity extends Activity implements View.OnClickListe
 	private void onDeletePressed() {
 		// License is removed for the selected video
 		onRemoveLicense();
-		Uri uri = Uri.parse(getSelectedMediaItem().videoUrl);
+		Uri uri = Utility.getPlaybackProperties(getSelectedMediaItem()).uri;
 		// Removes a download
 		DownloadService.sendRemoveDownload(
 				this, AxDownloadService.class, mAxDownloadTracker.getDownloadRequest(uri).id, false);
 	}
 
-	// Called when "Remove all licenses" button is pressed
 	private void onRemoveAllLicenses() {
 		// All saved licenses are removed
 		mLicenseManager.releaseAllLicenses();
@@ -360,7 +376,8 @@ public class SampleChooserActivity extends Activity implements View.OnClickListe
 	// Called when "Remove license" button is pressed or as a first step of deleting a downloaded video
 	private void onRemoveLicense() {
 		// License is removed for the selected video
-		mLicenseManager.releaseLicense(getSelectedMediaItem().videoUrl);
+		mLicenseManager.releaseLicense(
+				String.valueOf(Utility.getPlaybackProperties(getSelectedMediaItem()).uri));
 	}
 
 	// Called when "Download" button is pressed
@@ -371,17 +388,16 @@ public class SampleChooserActivity extends Activity implements View.OnClickListe
 					R.string.error_no_connection_for_downloading, Toast.LENGTH_LONG).show();
 			return;
 		}
-		// Download a license
-		downloadLicenseWithResult();
+		// Download a license if the content is protected
+		downloadLicenseWithResult(getSelectedMediaItem());
 
-		Uri uri = Uri.parse(getSelectedMediaItem().videoUrl);
 		// Prepare DownloadHelper
 		if (mDownloadHelper != null) {
 			mDownloadHelper.release();
 			mDownloadHelper = null;
 		}
 		mAxDownloadTracker.clearDownloadHelper();
-		mDownloadHelper = mAxDownloadTracker.getDownloadHelper(uri,this);
+		mDownloadHelper = mAxDownloadTracker.getDownloadHelper(getSelectedMediaItem(),this);
 		try {
 			mDownloadHelper.prepare(this);
 		} catch (Exception e) {
@@ -390,14 +406,17 @@ public class SampleChooserActivity extends Activity implements View.OnClickListe
 	}
 
 	// A method for downloading a license
-	private void downloadLicenseWithResult() {
+	private void downloadLicenseWithResult(MediaItem mediaItem) {
 		// Result is handled in the OfflineLicenseManager class
-		mLicenseManager.downloadLicenseWithResult(
-				getSelectedMediaItem().licenseServer,
-				getSelectedMediaItem().videoUrl,
-				getSelectedMediaItem().licenseToken,
-				true
-		);
+		MediaItem.DrmConfiguration drmConfiguration = Utility.getDrmConfiguration(mediaItem);
+		if (drmConfiguration != null) {
+			mLicenseManager.downloadLicenseWithResult(
+					String.valueOf(drmConfiguration.licenseUri),
+					String.valueOf(Utility.getPlaybackProperties(mediaItem).uri),
+					drmConfiguration.requestHeaders.get("X-AxDRM-Message"),
+					true
+			);
+		}
 	}
 
 	// Called when "Play" button is pressed. This method is for starting online playback
@@ -413,13 +432,18 @@ public class SampleChooserActivity extends Activity implements View.OnClickListe
 	// Called when "Request license" button is pressed
 	private void onSavePressed() {
 		// Download license for the selected video
-		downloadLicense();
+		downloadLicense(getSelectedMediaItem());
 	}
 
 	// A method for downloading license for currently selected video
-	private void downloadLicense() {
-		mLicenseManager.downloadLicense(getSelectedMediaItem().licenseServer,
-				getSelectedMediaItem().videoUrl, getSelectedMediaItem().licenseToken);
+	private void downloadLicense(MediaItem mediaItem) {
+		MediaItem.DrmConfiguration drmConfiguration = Utility.getDrmConfiguration(mediaItem);
+		if (drmConfiguration != null) {
+			mLicenseManager.downloadLicense(
+					String.valueOf(drmConfiguration.licenseUri),
+					String.valueOf(Utility.getPlaybackProperties(mediaItem).uri),
+					drmConfiguration.requestHeaders.get("X-AxDRM-Message"));
+		}
 	}
 
 	private void showToast(String errorMessage){
@@ -451,11 +475,27 @@ public class SampleChooserActivity extends Activity implements View.OnClickListe
 			for (int i = 0; i < jsonArray.length(); i++) {
 				try {
 					JSONObject jsonObject = jsonArray.getJSONObject(i);
-					MediaItem mediaItem = new MediaItem();
-					mediaItem.title = jsonObject.getString("title");
-					mediaItem.videoUrl = jsonObject.getString("videoUrl");
-					mediaItem.licenseServer = jsonObject.getString("licenseServer");
-					mediaItem.licenseToken = jsonObject.getString("licenseToken");
+					MediaItem.Builder mediaItemBuilder = new MediaItem.Builder();
+					if (jsonObject.has("title")) {
+//						mediaItemBuilder.setMediaId(jsonObject.getString("title"));
+						mediaItemBuilder.setMediaMetadata(new MediaMetadata.Builder().setTitle(
+								jsonObject.getString("title")).build());
+					}
+					if (jsonObject.has("videoUrl")) {
+						mediaItemBuilder.setUri(jsonObject.getString("videoUrl"));
+					}
+					if (jsonObject.has("drmScheme")) {
+						mediaItemBuilder.setDrmUuid(Util.getDrmUuid(jsonObject.getString("drmScheme")));
+						if (jsonObject.has("licenseServer")) {
+							mediaItemBuilder.setDrmLicenseUri(jsonObject.getString("licenseServer"));
+						}
+						if (jsonObject.has("licenseToken")) {
+							Map<String, String> requestHeaders = new HashMap<>();
+							requestHeaders.put("X-AxDRM-Message", jsonObject.getString("licenseToken"));
+							mediaItemBuilder.setDrmLicenseRequestHeaders(requestHeaders);
+						}
+					}
+					MediaItem mediaItem = mediaItemBuilder.build();
 					mMediaItems.add(mediaItem);
 				} catch (JSONException e) {
 					e.printStackTrace();
@@ -475,9 +515,13 @@ public class SampleChooserActivity extends Activity implements View.OnClickListe
 	// A method for starting activity for the playback of currently selected video
 	private void startVideoActivity(int position, boolean shouldPlayOffline) {
 		Intent intent = new Intent(this, PlayerActivity.class);
-		intent.setData(Uri.parse(getMediaItem(position).videoUrl));
-		intent.putExtra(PlayerActivity.LICENSE_TOKEN, getMediaItem(position).licenseToken);
-		intent.putExtra(PlayerActivity.WIDEVINE_LICENSE_SERVER, getMediaItem(position).licenseServer);
+		intent.setData(Utility.getPlaybackProperties(getMediaItem(position)).uri);
+		MediaItem.DrmConfiguration drmConfiguration = Utility.getDrmConfiguration(getMediaItem(position));
+		if (drmConfiguration != null) {
+			intent.putExtra(PlayerActivity.DRM_SCHEME, Utility.getDrmSchemeFromUuid(drmConfiguration.uuid));
+			intent.putExtra(PlayerActivity.LICENSE_TOKEN, drmConfiguration.requestHeaders.get("X-AxDRM-Message"));
+			intent.putExtra(PlayerActivity.WIDEVINE_LICENSE_SERVER, String.valueOf(drmConfiguration.licenseUri));
+		}
 		intent.putExtra(PlayerActivity.SHOULD_PLAY_OFFLINE, shouldPlayOffline);
 		startActivity(intent);
 	}
@@ -538,7 +582,7 @@ public class SampleChooserActivity extends Activity implements View.OnClickListe
 		// Generate the list of tracks to download
 		int [][] tracks = getTracks();
 		// Download the currently selected video
-		mAxDownloadTracker.download(getSelectedMediaItem().title, tracks);
+		mAxDownloadTracker.download(getSelectedMediaItem().mediaId, tracks);
 	}
 
 	// Called when preparation of DownloadHelper failed
@@ -581,7 +625,7 @@ public class SampleChooserActivity extends Activity implements View.OnClickListe
 			mButtonRemoveLicense.setVisibility(View.VISIBLE);
 			mButtonRemoveAll.setVisibility(View.VISIBLE);
 			mOfflineAvailability.setTextColor(Color.GREEN);
-			mOfflineAvailability.setText(getResources().getString(R.string.available_offline));
+			mOfflineAvailability.setText(getResources().getString(R.string.available_offline_protected));
 		} else {
 			mButtonSave.setVisibility(View.VISIBLE);
 			mButtonPlayOffline.setVisibility(View.GONE);

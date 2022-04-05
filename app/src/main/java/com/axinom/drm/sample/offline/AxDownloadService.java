@@ -68,7 +68,7 @@ public class AxDownloadService extends DownloadService {
     @NonNull
     @Override
     protected Notification getForegroundNotification(@NonNull List<Download> downloads) {
-        Notification notification = notificationHelper.buildProgressNotification(
+        Notification notification = notificationHelper.buildProgressNotification(this,
                 R.drawable.ic_download, null, null, downloads);
         if (notification.extras != null) {
             // Notification about download progress is sent here
@@ -100,17 +100,17 @@ public class AxDownloadService extends DownloadService {
         }
 
         @Override
-        public void onDownloadChanged(DownloadManager manager, Download download) {
+        public void onDownloadChanged(DownloadManager manager, Download download, Exception exception) {
             Notification notification;
             if (download.state == Download.STATE_COMPLETED) {
                 notification =
-                        notificationHelper.buildDownloadCompletedNotification(
+                        notificationHelper.buildDownloadCompletedNotification(context,
                                 R.drawable.ic_download_done,
                                 /* contentIntent= */ null,
                                 Util.fromUtf8Bytes(download.request.data));
             } else if (download.state == Download.STATE_FAILED) {
                 notification =
-                        notificationHelper.buildDownloadFailedNotification(
+                        notificationHelper.buildDownloadFailedNotification(context,
                                 R.drawable.ic_download_done,
                                 /* contentIntent= */ null,
                                 Util.fromUtf8Bytes(download.request.data));

@@ -2,7 +2,7 @@
 
 This is a sample project of an Android video player application. Its purpose is to provide a starting point for developers who want to implement a player application that includes support for Axinom DRM and offline playback.
 
-The application uses [ExoPlayer](https://github.com/google/ExoPlayer) to play MPEG-DASH streams protected using Axinom DRM. Additionally, it supports offline playback and implements functionality for downloading protected streams and persisting DRM licenses for later use.
+The application uses [ExoPlayer](https://github.com/google/ExoPlayer) to play MPEG-DASH and HLS streams protected using Axinom DRM. Additionally, it supports offline playback and implements functionality for downloading protected streams and persisting DRM licenses for later use.
 
 The application itself can be used for demonstration and testing purposes of the mentioned features. Details about the integration of Axinom DRM can be found in the source code. It contains explanatory comments and can be used as a development guide in addition to this README.
 
@@ -11,8 +11,8 @@ The application itself can be used for demonstration and testing purposes of the
 
 Here is a list of more important files in the project that have a key role in Axinom DRM integration and the offline playback support.
 
-[axlicense.aar](app/libs/axlicense-3.4.19352.1.aar/)
-* A library included in the project which helps with downloading the licenses, checking their validity, and restoring the licenses for offline playback.
+[OfflineLicenseManager.java](app/src/main/java/com/axinom/drm/sample/license/OfflineLicenseManager.java)
+* A class that helps with downloading the licenses, checking their validity, and restoring the licenses for offline playback. Supporting classes for it can be found in the "license" package.
 
 
 [SampleChooserActivity.java](app/src/main/java/com/axinom/drm/sample/activity/SampleChooserActivity.java)
@@ -93,6 +93,8 @@ Keys to provide value for are the following:
 
 **videoUrl:** DASH manifest URL.
 
+**drmScheme:** DRM scheme for protected video.
+
 **licenseServer:** Axinom DRM License Server URL.
 
 **licenseToken:** License Token for License Request.
@@ -101,8 +103,7 @@ Keys to provide value for are the following:
 
 It is possible to download both non-protected and DRM-protected videos and play them offline.
 
-The axlicense library takes care of downloading the licenses, checking their validity, and restoring the licenses for offline playback.  
-To play DRM videos in offline mode, the library needs to save the persistent license keys on the device's internal storage.  
+To play DRM videos in offline mode, the persistent license keys have to be saved on the device's internal storage.  
 To preserve an offline license, `"allow_persistence": true` flag needs to be present inside the DRM token.
 
 To download licenses, **OfflineLicenseManager** class is used.  

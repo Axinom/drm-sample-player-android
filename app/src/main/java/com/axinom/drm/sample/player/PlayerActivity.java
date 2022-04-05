@@ -4,19 +4,27 @@ import android.Manifest.permission;
 import android.annotation.TargetApi;
 import android.app.Activity;
 import android.app.AlertDialog;
-import android.content.DialogInterface;
+import android.content.ClipData;
+import android.content.ClipboardManager;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Bundle;
+import android.text.method.ScrollingMovementMethod;
 import android.util.Log;
+import android.view.View;
+import android.widget.Button;
+import android.widget.FrameLayout;
+import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 
 import com.axinom.drm.sample.R;
+import com.axinom.drm.sample.util.Utility;
 import com.google.android.exoplayer2.ExoPlaybackException;
+import com.google.android.exoplayer2.MediaItem;
 import com.google.android.exoplayer2.drm.UnsupportedDrmException;
 import com.google.android.exoplayer2.mediacodec.MediaCodecRenderer;
 import com.google.android.exoplayer2.mediacodec.MediaCodecUtil;
@@ -26,24 +34,23 @@ import com.google.android.exoplayer2.util.Util;
 import java.net.CookieHandler;
 import java.net.CookieManager;
 import java.net.CookiePolicy;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * An activity that plays media using {@link DemoPlayer}.
  */
-public class PlayerActivity extends Activity implements DemoPlayer.Listener {
+public class PlayerActivity extends Activity implements DemoPlayer.Listener, View.OnClickListener {
 
   private static final String TAG = "PlayerActivity";
 
   public static final String WIDEVINE_LICENSE_SERVER = "widevine_license_server";
   public static final String LICENSE_TOKEN = "license_token";
+  public static final String DRM_SCHEME = "drm_scheme";
   public static final String SHOULD_PLAY_OFFLINE = "should_play_offline";
 
-  // Content URI
-  private Uri mContentUri;
-  // License server URL
-  private String mWidevineLicenseServer;
-  // License token is sent together with license request to get a license
-  private String mLicenseToken;
+  // Media item that contains relevant information for the player
+  private MediaItem mMediaItem;
   // Boolean to determine if online or offline source should be used for playback
   private boolean mShouldPlayOffline;
   // Save last playback position on suspend
@@ -59,8 +66,20 @@ public class PlayerActivity extends Activity implements DemoPlayer.Listener {
 
   // View for displaying video playback
   private PlayerView mPlayerView;
-  // TextView on the top right corner of the screen indicating whether online or offline source is used for playback
-  private TextView mPlayerPlaybackSource;
+  // Console output layout frame
+  private FrameLayout mConsoleOutputFrame;
+  // ScrollView for console output
+  private ScrollView mConsoleOutputScrollView;
+  // TextView for console output
+  private TextView mConsoleOutputText;
+  // Button for showing and hiding console output view
+  private Button mConsoleButton;
+  // Button for deleting the currently playing content.
+  private Button mDeleteButton;
+  // Button for copying the console output text to clipboard
+  private Button mConsoleCopyButton;
+  // Button for clearing the text in console output view
+  private Button mConsoleClearButton;
   // Player
   private DemoPlayer mPlayer;
 
@@ -69,7 +88,15 @@ public class PlayerActivity extends Activity implements DemoPlayer.Listener {
     super.onCreate(savedInstanceState);
     setContentView(R.layout.player_activity);
     mPlayerView = findViewById(R.id.player_view);
-    mPlayerPlaybackSource = findViewById(R.id.player_playback_source);
+    mConsoleOutputFrame = findViewById(R.id.player_console_output_frame);
+    mConsoleOutputScrollView = findViewById(R.id.player_console_output_scrollview);
+    mConsoleOutputText = findViewById(R.id.player_console_output_text);
+    mConsoleOutputText.setMovementMethod(new ScrollingMovementMethod());
+    writeToConsole("Activity onCreate() called");
+    mConsoleButton = findViewById(R.id.player_console_button);
+    mDeleteButton = findViewById(R.id.player_delete_button);
+    mConsoleCopyButton = findViewById(R.id.player_console_copy_button);
+    mConsoleClearButton = findViewById(R.id.player_console_clear_button);
     CookieHandler currentHandler = CookieHandler.getDefault();
     if (currentHandler != sDefaultCookieManager) {
       CookieHandler.setDefault(sDefaultCookieManager);
@@ -79,20 +106,35 @@ public class PlayerActivity extends Activity implements DemoPlayer.Listener {
 
   // A method to obtain data (content URI, license token and server URL) from intent used to start this Activity
   private void handleIntent(Intent intent){
-    Log.d(TAG, "handleIntent() called with: intent = [" + intent + "]");
-    mContentUri = intent.getData();
-    mLicenseToken = intent.getStringExtra(LICENSE_TOKEN);
-    mWidevineLicenseServer = intent.getStringExtra(WIDEVINE_LICENSE_SERVER);
+    writeToConsole("Handling intent = [" + intent + "]");
+    MediaItem.Builder mediaItemBuilder = new MediaItem.Builder().setUri(intent.getData());
+    if (intent.hasExtra(DRM_SCHEME)) {
+      Map<String, String> requestHeaders = new HashMap<>();
+      requestHeaders.put("X-AxDRM-Message", intent.getStringExtra(LICENSE_TOKEN));
+      mediaItemBuilder.setDrmUuid(Util.getDrmUuid(String.valueOf(intent.getStringExtra(DRM_SCHEME))))
+              .setDrmLicenseUri(intent.getStringExtra(WIDEVINE_LICENSE_SERVER))
+              .setDrmLicenseRequestHeaders(requestHeaders);
+    }
+    mMediaItem = mediaItemBuilder.build();
     if (intent.getExtras() != null) {
       mShouldPlayOffline = intent.getExtras().getBoolean(SHOULD_PLAY_OFFLINE);
     }
     mPlayerPosition = 0;
     mPlayerStartOnPrepared = true;
+    String log = "Parameters from intent: \nContent URI: " + Utility.getPlaybackProperties(mMediaItem).uri
+            + "\nShould play offline: " + mShouldPlayOffline;
+    MediaItem.DrmConfiguration drmConfiguration = Utility.getDrmConfiguration(mMediaItem);
+    if (drmConfiguration != null) {
+      log += "\nDRM scheme: " + intent.hasExtra(DRM_SCHEME)
+              + "\nLicense Token: " + drmConfiguration.requestHeaders.get("X-AxDRM-Message")
+              + "\nWidevine License Server: " + drmConfiguration.licenseUri;
+    }
+    writeToConsole(log);
   }
 
   @Override
   public void onNewIntent(Intent intent) {
-    Log.d(TAG, "onNewIntent() called with: intent = [" + intent + "]");
+    writeToConsole("Activity onNewIntent() called with: intent = [" + intent + "]");
     releasePlayer();
     handleIntent(intent);
   }
@@ -100,12 +142,17 @@ public class PlayerActivity extends Activity implements DemoPlayer.Listener {
   @Override
   public void onResume() {
     super.onResume();
+    writeToConsole("Activity onResume() called");
+    mConsoleButton.setOnClickListener(this);
+    mDeleteButton.setOnClickListener(this);
+    mConsoleCopyButton.setOnClickListener(this);
+    mConsoleClearButton.setOnClickListener(this);
     restorePlayer();
   }
 
   // A method for restoring the player (should be called when application is resumed from minimized state for example)
   private void restorePlayer() {
-    Log.d(TAG, "restorePlayer() called");
+    writeToConsole("Restoring the player");
     if (mPlayer == null) {
       if (!requestPermissionsIfNeeded()) {
         preparePlayer();
@@ -116,13 +163,18 @@ public class PlayerActivity extends Activity implements DemoPlayer.Listener {
   @Override
   public void onPause() {
     super.onPause();
-    Log.d(TAG, "onPause() called");
+    writeToConsole("Activity onPause() called");
+    mConsoleButton.setOnClickListener(null);
+    mDeleteButton.setOnClickListener(null);
+    mConsoleCopyButton.setOnClickListener(null);
+    mConsoleClearButton.setOnClickListener(null);
     releasePlayer();
   }
 
   @Override
   public void onDestroy() {
     super.onDestroy();
+    writeToConsole("Activity onDestroy() called");
     releasePlayer();
   }
 
@@ -131,11 +183,13 @@ public class PlayerActivity extends Activity implements DemoPlayer.Listener {
   public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions,
                                          @NonNull int[] grantResults) {
     if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+      writeToConsole("Permissions granted, can start preparing the player.");
       // Prepare player if permissions are granted
       preparePlayer();
     } else {
       Toast.makeText(getApplicationContext(), R.string.storage_permission_denied,
               Toast.LENGTH_LONG).show();
+      writeToConsole("Permission to access storage was denied, player will be closed.");
       finish();
     }
   }
@@ -150,11 +204,12 @@ public class PlayerActivity extends Activity implements DemoPlayer.Listener {
    */
   @TargetApi(23)
   private boolean requestPermissionsIfNeeded() {
-    Log.d(TAG, "requestPermissionsIfNeeded() called");
-    if (requiresPermission(mContentUri)) {
+    if (requiresPermission(Utility.getPlaybackProperties(mMediaItem).uri)) {
+      writeToConsole("Permissions needed, will request.");
       requestPermissions(new String[] {permission.READ_EXTERNAL_STORAGE}, 0);
       return true;
     } else {
+      writeToConsole("Permissions not needed.");
       return false;
     }
   }
@@ -169,12 +224,9 @@ public class PlayerActivity extends Activity implements DemoPlayer.Listener {
 
   // A method for preparing the player
   private void preparePlayer() {
-    Log.d(TAG, "preparePlayer() called");
     // Add parameters for player
     DemoPlayer.Params params = new DemoPlayer.Params();
-    params.contentUri = mContentUri;
-    params.axDrmMessage = mLicenseToken;
-    params.licenseServer = mWidevineLicenseServer;
+    params.mediaItem = mMediaItem;
     params.startPosition = mPlayerPosition;
     params.startOnPrepared = mPlayerStartOnPrepared;
     params.shouldPlayOffline = mShouldPlayOffline;
@@ -189,7 +241,6 @@ public class PlayerActivity extends Activity implements DemoPlayer.Listener {
 
   // A method for releasing the player (should be called when application is closed or minimized for example)
   private void releasePlayer() {
-    Log.d(TAG, "releasePlayer() called");
     if (mPlayer != null) {
       mPlayerPosition = mPlayer.getCurrentPosition();
       mPlayer.release();
@@ -200,23 +251,15 @@ public class PlayerActivity extends Activity implements DemoPlayer.Listener {
     }
   }
 
-  // Callback method for displaying what source is used for playback (online or offline source).
-  // Even though the preferred source is determined by the user (by clicking "Play" for online playback
-  // and "Play offline" for offline playback), the final confirmation callback about the source used
-  // comes from player.
   @Override
-  public void onPlaybackSourceSet(int source) {
-    if (source == DemoPlayer.ONLINE_PLAYBACK) {
-      mPlayerPlaybackSource.setText(getString(R.string.player_online_playback));
-    } else {
-      mPlayerPlaybackSource.setText(getString(R.string.player_offline_playback));
-    }
+  public void onPlayerLog(String message, String tag) {
+    writeToConsole(message, tag);
   }
 
   // DemoPlayer.Listener implementation
   @Override
   public void onPlayerError(Exception e) {
-    Log.d(TAG, "onPlayerError() called with: e = [" + e + "]");
+    writeToConsole("Player error occurred: [" + e + "]");
     String errorString;
     if (e instanceof UnsupportedDrmException) {
       // Special case DRM failures.
@@ -251,17 +294,60 @@ public class PlayerActivity extends Activity implements DemoPlayer.Listener {
   }
 
   private void showAlertDialog(String message){
+    writeToConsole("Showing alert dialog with message = [" + message + "]");
     AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(this);
     alertDialogBuilder.setTitle("Error");
     alertDialogBuilder
             .setMessage(message)
             .setCancelable(false)
-            .setPositiveButton("OK",new DialogInterface.OnClickListener() {
-              public void onClick(DialogInterface dialog,int id) {
-                finish();
-              }
-            });
+            .setPositiveButton("OK", (dialog, id) -> finish());
     AlertDialog alertDialog = alertDialogBuilder.create();
     alertDialog.show();
   }
+
+  private void writeToConsole(String log) {
+    writeToConsole(log, null);
+  }
+
+  private void writeToConsole(String log, String tag) {
+    if (tag == null) {
+      Log.d(TAG, log);
+    } else {
+      Log.d(tag, log);
+    }
+    mConsoleOutputText.append(Utility.getCurrentTime());
+    mConsoleOutputText.append(log);
+    mConsoleOutputText.append("\n\n");
+    mConsoleOutputScrollView.fullScroll(ScrollView.FOCUS_DOWN);
+  }
+
+  // Method for deleting currently playing video in the player class.
+  // Called when delete button is pressed on the player view.
+  private void onDeletePressed() {
+    mPlayer.onDeletePressed();
+  }
+
+  @Override
+  public void onClick(View view) {
+    if (view.getId() == mConsoleButton.getId()) {
+      if (mConsoleOutputFrame.getVisibility() == View.VISIBLE) {
+        mConsoleOutputFrame.setVisibility(View.GONE);
+      } else {
+        mConsoleOutputFrame.setVisibility(View.VISIBLE);
+      }
+    } else if (view.getId() == mDeleteButton.getId()) {
+      onDeletePressed();
+    } else if (view.getId() == mConsoleCopyButton.getId()) {
+      ClipboardManager clipboardManager
+              = (ClipboardManager)getApplicationContext().getSystemService(CLIPBOARD_SERVICE);
+      if (clipboardManager != null) {
+        ClipData clipData = ClipData.newPlainText(
+                "DRM Sample Player console", mConsoleOutputText.getText());
+        clipboardManager.setPrimaryClip(clipData);
+      }
+    } else if (view.getId() == mConsoleClearButton.getId()) {
+      mConsoleOutputText.setText("");
+    }
+  }
+
 }

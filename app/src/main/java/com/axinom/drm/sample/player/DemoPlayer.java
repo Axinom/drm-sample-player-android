@@ -8,35 +8,39 @@ import android.util.Log;
 
 import androidx.annotation.NonNull;
 
-import com.axinom.axlicense.LicenseManagerErrorCode;
-import com.axinom.axlicense.OfflineLicenseManager;
-import com.axinom.axlicense.interfaces.IOfflineLicenseManagerListener;
-import com.axinom.axlicense.internal.model.DrmMessage;
-import com.axinom.axlicense.internal.utils.DrmUtils;
 import com.axinom.drm.sample.R;
+import com.axinom.drm.sample.license.LicenseManagerErrorCode;
+import com.axinom.drm.sample.license.OfflineLicenseManager;
+import com.axinom.drm.sample.license.interfaces.IOfflineLicenseManagerListener;
+import com.axinom.drm.sample.license.internal.model.DrmMessage;
+import com.axinom.drm.sample.license.internal.utils.DrmUtils;
+import com.axinom.drm.sample.offline.AxDownloadService;
 import com.axinom.drm.sample.offline.AxDownloadTracker;
 import com.axinom.drm.sample.offline.AxOfflineManager;
+import com.axinom.drm.sample.util.Utility;
 import com.google.android.exoplayer2.C;
 import com.google.android.exoplayer2.DefaultRenderersFactory;
 import com.google.android.exoplayer2.ExoPlaybackException;
 import com.google.android.exoplayer2.ExoPlayer;
 import com.google.android.exoplayer2.Format;
+import com.google.android.exoplayer2.MediaItem;
 import com.google.android.exoplayer2.Player;
 import com.google.android.exoplayer2.SimpleExoPlayer;
 import com.google.android.exoplayer2.drm.DefaultDrmSessionManager;
-import com.google.android.exoplayer2.drm.ExoMediaCrypto;
 import com.google.android.exoplayer2.drm.FrameworkMediaDrm;
 import com.google.android.exoplayer2.drm.HttpMediaDrmCallback;
 import com.google.android.exoplayer2.offline.DownloadHelper;
 import com.google.android.exoplayer2.offline.DownloadRequest;
+import com.google.android.exoplayer2.offline.DownloadService;
 import com.google.android.exoplayer2.source.MediaSource;
 import com.google.android.exoplayer2.source.TrackGroup;
 import com.google.android.exoplayer2.source.TrackGroupArray;
 import com.google.android.exoplayer2.source.dash.DashMediaSource;
 import com.google.android.exoplayer2.source.dash.DefaultDashChunkSource;
+import com.google.android.exoplayer2.source.hls.DefaultHlsDataSourceFactory;
+import com.google.android.exoplayer2.source.hls.HlsMediaSource;
 import com.google.android.exoplayer2.text.Cue;
 import com.google.android.exoplayer2.text.TextOutput;
-import com.google.android.exoplayer2.trackselection.AdaptiveTrackSelection;
 import com.google.android.exoplayer2.trackselection.DefaultTrackSelector;
 import com.google.android.exoplayer2.trackselection.TrackSelection;
 import com.google.android.exoplayer2.trackselection.TrackSelectionArray;
@@ -59,9 +63,7 @@ class DemoPlayer implements ExoPlayer.EventListener, VideoListener, TextOutput, 
 
   // Parameters used to initialize the player
   public static class Params {
-    Uri contentUri;
-    String licenseServer;
-    String axDrmMessage;
+    MediaItem mediaItem;
     long startPosition = 0;
     boolean startOnPrepared = true;
     boolean shouldPlayOffline = false;
@@ -73,14 +75,12 @@ class DemoPlayer implements ExoPlayer.EventListener, VideoListener, TextOutput, 
    * Listener interface for player events.
    */
   public interface Listener {
-    void onPlaybackSourceSet(int source);
+    void onPlayerLog(String message, String tag);
     void onPlayerError(Exception e);
   }
 
   private static final String TAG = DemoPlayer.class.getSimpleName();
   private static final String PLAYER_APP_NAME = "ExoPlayerDemo";
-  public static final int ONLINE_PLAYBACK = 1;
-  public static final int OFFLINE_PLAYBACK = 2;
 
   private SimpleExoPlayer mPlayer;
   private boolean mPlayerIsCreated = false;
@@ -93,9 +93,11 @@ class DemoPlayer implements ExoPlayer.EventListener, VideoListener, TextOutput, 
   private DownloadRequest mDownloadRequest;
   private Params mParams;
   // A DrmSessionManager that supports playbacks using ExoMediaDrm
-  private DefaultDrmSessionManager<ExoMediaCrypto> mDrmSessionManager;
+  private DefaultDrmSessionManager mDrmSessionManager;
   // Estimates bandwidth by listening to data transfers
   private DefaultBandwidthMeter mBandwidthMeter;
+  // Media format
+  private int mFormat;
 
   private final CopyOnWriteArrayList<Listener> mListeners;
 
@@ -110,28 +112,34 @@ class DemoPlayer implements ExoPlayer.EventListener, VideoListener, TextOutput, 
 
   // A method for creating player using predefined parameters
   private void playerCreate(Params params){
+    dispatchPlayerLog("Creating the player");
     mBandwidthMeter = new DefaultBandwidthMeter.Builder(mContext).setResetOnNetworkTypeChange(false).build();
     mMediaDataSourceFactory = buildDataSourceFactory();
+    MediaItem.DrmConfiguration drmConfiguration = Utility.getDrmConfiguration(params.mediaItem);
     try {
       mPlayerIsCreated = false;
-      // Only DASH format is allowed for playback in this application
-      if (Util.inferContentType(params.contentUri) != C.TYPE_DASH) {
+      // Only DASH and HLS formats are allowed for playback in this application
+      mFormat = Util.inferContentType(Utility.getPlaybackProperties(params.mediaItem).uri);
+      if (mFormat != C.TYPE_DASH && mFormat != C.TYPE_HLS) {
         throw new UnsupportedFormatException();
       }
-      mDrmSessionManager = buildDrmSessionManager(mContext, params.licenseServer, params.axDrmMessage);
-      // OfflineLicenseManager should be initialized and license keys received only if offline playback is required
-      if (mParams.shouldPlayOffline) {
-        mOfflineLicenseManager = new OfflineLicenseManager(mContext);
-        mOfflineLicenseManager.setEventListener(this);
-        mOfflineLicenseManager.getLicenseKeys(params.contentUri.toString());
+      if (drmConfiguration != null) {
+        mDrmSessionManager = buildDrmSessionManager(mContext, String.valueOf(drmConfiguration.licenseUri),
+                drmConfiguration.requestHeaders.get("X-AxDRM-Message"));
+        // OfflineLicenseManager should be initialized and license keys received only if offline playback is required
+        if (mParams.shouldPlayOffline) {
+          mOfflineLicenseManager = new OfflineLicenseManager(mContext);
+          mOfflineLicenseManager.setEventListener(this);
+          mOfflineLicenseManager.getLicenseKeys(
+                  String.valueOf(Utility.getPlaybackProperties(params.mediaItem).uri));
+        }
       }
     } catch (UnsupportedFormatException | NullPointerException e){
       dispatchPlayerError(e);
       return;
     }
     // Defining DefaultTrackSelector for the player
-    TrackSelection.Factory trackSelectionFactory = new AdaptiveTrackSelection.Factory();
-    DefaultTrackSelector trackSelector = new DefaultTrackSelector(mContext, trackSelectionFactory);
+    DefaultTrackSelector trackSelector = new DefaultTrackSelector(mContext);
     trackSelector.setParameters(new DefaultTrackSelector.ParametersBuilder(mContext).setPreferredTextLanguage("eng"));
 
     // Defining DefaultRenderersFactory for the player
@@ -142,9 +150,10 @@ class DemoPlayer implements ExoPlayer.EventListener, VideoListener, TextOutput, 
               .build();
       mPlayer.addListener(this);
       mPlayerIsCreated = true;
-      // Preparing the player can start here nn case content should be played online (offline license
-      // has to be acquired first before starting the preparation process).
-      if (!mParams.shouldPlayOffline) {
+      // Preparing the player can start here in case content should be played online (offline license
+      // has to be acquired first before starting the preparation process) or if the content is not
+      // protected.
+      if (!mParams.shouldPlayOffline || drmConfiguration == null) {
         startPlayerPrepare();
       }
     } catch (NullPointerException e){
@@ -154,12 +163,14 @@ class DemoPlayer implements ExoPlayer.EventListener, VideoListener, TextOutput, 
 
   // Returns a new DataSource factory
   private DataSource.Factory buildDataSourceFactory() {
+    dispatchPlayerLog("Building DataSourceFactory");
     // If offline playback is allowed and media has already been downloaded,
     // use CacheDataSource from AxOfflineManager
     if (mParams.shouldPlayOffline) {
-      AxDownloadTracker mAxDownloadTracker = AxOfflineManager.getInstance().getDownloadTracker();
-      if (mAxDownloadTracker != null) {
-        mDownloadRequest = mAxDownloadTracker.getDownloadRequest(mParams.contentUri);
+      AxDownloadTracker axDownloadTracker = AxOfflineManager.getInstance().getDownloadTracker();
+      if (axDownloadTracker != null) {
+        mDownloadRequest = axDownloadTracker.getDownloadRequest(
+                Utility.getPlaybackProperties(mParams.mediaItem).uri);
         if (mDownloadRequest != null) {
           return AxOfflineManager.getInstance().buildDataSourceFactory(mContext);
         }
@@ -169,6 +180,12 @@ class DemoPlayer implements ExoPlayer.EventListener, VideoListener, TextOutput, 
     } else {
       return new DefaultDataSourceFactory(mContext, mBandwidthMeter,
               buildHttpDataSourceFactory(mContext, true));
+    }
+  }
+
+  private void dispatchPlayerLog(String message){
+    for (Listener listener : mListeners) {
+      listener.onPlayerLog(message, TAG);
     }
   }
 
@@ -188,29 +205,32 @@ class DemoPlayer implements ExoPlayer.EventListener, VideoListener, TextOutput, 
 
   // A method for building MediaSource for playback
   private MediaSource buildMediaSource(Context context, Uri videoUri){
-    Log.d(TAG, "buildMediaSource() called with: context = [" + context + "], videoUri = [" + videoUri + "]");
+    dispatchPlayerLog("Building MediaSource with videoUri = [" + videoUri + "]");
 
     // If offline playback is allowed and media has already been downloaded,
     // use the existing download request to create the media source
     if (mParams.shouldPlayOffline) {
       if (mDownloadRequest != null) {
-        for (Listener listener : mListeners) {
-          listener.onPlaybackSourceSet(OFFLINE_PLAYBACK);
-        }
+        dispatchPlayerLog(mContext.getString(R.string.player_offline_playback));
         return DownloadHelper.createMediaSource(mDownloadRequest, mMediaDataSourceFactory, mDrmSessionManager);
       }
       dispatchPlayerErrorMessage(mContext.getString(R.string.error_offline_playback));
       return null;
     } else {
-      for (Listener listener : mListeners) {
-        listener.onPlaybackSourceSet(ONLINE_PLAYBACK);
-      }
+      dispatchPlayerLog(mContext.getString(R.string.player_online_playback));
       String userAgent = Util.getUserAgent(context, PLAYER_APP_NAME);
       DataSource.Factory dataSourceFactory = new DefaultDataSourceFactory(context, userAgent);
-      return new DashMediaSource.Factory(
-              new DefaultDashChunkSource.Factory(dataSourceFactory), dataSourceFactory)
-              .setDrmSessionManager(mDrmSessionManager)
-              .createMediaSource(videoUri);
+      if (mFormat == C.TYPE_DASH) {
+        return new DashMediaSource.Factory(
+                new DefaultDashChunkSource.Factory(dataSourceFactory), dataSourceFactory)
+                .setDrmSessionManager(mDrmSessionManager)
+                .createMediaSource(mParams.mediaItem);
+      } else {
+        return new HlsMediaSource.Factory(
+                new DefaultHlsDataSourceFactory(dataSourceFactory))
+                .setDrmSessionManager(mDrmSessionManager)
+                .createMediaSource(mParams.mediaItem);
+      }
     }
   }
 
@@ -221,8 +241,10 @@ class DemoPlayer implements ExoPlayer.EventListener, VideoListener, TextOutput, 
   }
 
   // A method for building DrmSessionManager
-  private DefaultDrmSessionManager<ExoMediaCrypto> buildDrmSessionManager(Context context,
+  private DefaultDrmSessionManager buildDrmSessionManager(Context context,
                                                                           String licenseUrl, String drmToken) {
+    dispatchPlayerLog("Building DrmSessionManager with licenseUrl = [" +
+            licenseUrl + "] and drmToken = [" + drmToken + "]");
     HttpMediaDrmCallback drmCallback = new HttpMediaDrmCallback(licenseUrl,
             buildHttpDataSourceFactory(context, false));
     // Here the license token is attached to license request
@@ -238,7 +260,7 @@ class DemoPlayer implements ExoPlayer.EventListener, VideoListener, TextOutput, 
 
   // A method for preparing the player for creation
   public void prepare(Params params, PlayerView playerView) {
-    Log.d(TAG, "prepare() called with: params = [" + params + "]");
+    dispatchPlayerLog("Preparing the player for creation");
     mParams = params;
     playerRelease();
     playerCreate(params);
@@ -250,10 +272,12 @@ class DemoPlayer implements ExoPlayer.EventListener, VideoListener, TextOutput, 
 
   // A method for preparing the player
   private void startPlayerPrepare() {
-    Log.d(TAG, "startPlayerPrepare() called");
-    MediaSource mediaSource = buildMediaSource(mContext, mParams.contentUri);
+    dispatchPlayerLog("Starting the preparation of the player for video playback");
+    MediaSource mediaSource = buildMediaSource(
+            mContext, Utility.getPlaybackProperties(mParams.mediaItem).uri);
     if (mediaSource != null) {
-      mPlayer.prepare(mediaSource);
+      mPlayer.setMediaSource(mediaSource);
+      mPlayer.prepare();
       if (mParams.startPosition != 0){
         mPlayer.seekTo(mParams.startPosition);
       }
@@ -262,6 +286,7 @@ class DemoPlayer implements ExoPlayer.EventListener, VideoListener, TextOutput, 
 
   // General method for releasing the player
   private void playerRelease(){
+    dispatchPlayerLog("Releasing the player");
     if (mPlayer != null) {
       mPlayer.release();
       mPlayer = null;
@@ -284,14 +309,13 @@ class DemoPlayer implements ExoPlayer.EventListener, VideoListener, TextOutput, 
     for (int i = 0; i < trackSelectionArray.length; i++){
       TrackSelection trackSelection = trackSelectionArray.get(i);
       if (trackSelection != null) {
-        Log.d(TAG, "trackSelection, index = " + i + ", selected format = " + trackSelection.getSelectedFormat());
+        Log.d(TAG, "trackSelection, index = " + i);
       }
     }
   }
 
   private void dumpAvailableTracks(){
     TrackGroupArray trackGroups = mPlayer.getCurrentTrackGroups();
-
     for (int i = 0; i < trackGroups.length; i++){
       TrackGroup trackGroup = trackGroups.get(i);
       for (int trackIndex  = 0; trackIndex < trackGroup.length; trackIndex++){
@@ -302,37 +326,38 @@ class DemoPlayer implements ExoPlayer.EventListener, VideoListener, TextOutput, 
   }
 
   @Override
-  public void onPlayerStateChanged(boolean playWhenReady, int state) {
-    Log.d(TAG, "onPlayerStateChanged() called with: playWhenReady = [" + playWhenReady + "], state = [" + state + "]");
+  public void onPlaybackStateChanged(int state) {
+    String stateString;
     switch (state){
       case Player.STATE_IDLE:
-        Log.d(TAG, "idle");
+        stateString = "idle";
         break;
       case Player.STATE_BUFFERING:
-        Log.d(TAG, "buffering");
+        stateString = "buffering";
         break;
       case Player.STATE_READY:
-        Log.d(TAG, "ready");
+        stateString = "ready";
         dumpAvailableTracks();
         dumpSelectedTracks();
         break;
       case Player.STATE_ENDED:
-        Log.d(TAG, "ended");
+        stateString = "ended";
         break;
       default:
-        Log.d(TAG, "unknown state");
+        stateString = "unknown state";
     }
+    dispatchPlayerLog("Player state changed to = [" + state + " (" + stateString + ")]");
   }
 
   @Override
   public void onPlayerError(ExoPlaybackException exception) {
-    Log.d(TAG, "onPlayerError() called with: exception = [" + exception + "]");
     dispatchPlayerError(exception);
   }
 
+  // TextOutput implementation
   @Override
   public void onCues(@NonNull List<Cue> cues) {
-    Log.d(TAG, "onCues() called with: cues = [" + cues + "]");
+    dispatchPlayerLog("onCues() called with: cues = [" + cues + "]");
   }
 
   @Override
@@ -347,7 +372,7 @@ class DemoPlayer implements ExoPlayer.EventListener, VideoListener, TextOutput, 
 
   @Override
   public void onLicenseDownloadFailed(int code, String description, String manifestUrl) {
-    Log.e(TAG, "onLicenseDownloadFailed for manifest: " + manifestUrl + " code: " + code);
+    dispatchPlayerLog("onLicenseDownloadFailed for manifest: " + manifestUrl + " code: " + code);
   }
 
   @Override
@@ -372,13 +397,13 @@ class DemoPlayer implements ExoPlayer.EventListener, VideoListener, TextOutput, 
 
   @Override
   public void onLicenseKeysRestored(String manifestUrl, byte[] keyIds) {
-    Log.d(TAG, "onLicenseKeysRestored() called with: manifestUrl = [" + manifestUrl + "]");
+    dispatchPlayerLog("onLicenseKeysRestored() called with: manifestUrl = [" + manifestUrl + "]");
     onOfflineLicenseAcquired(manifestUrl, keyIds);
   }
 
   @Override
   public void onLicenseRestoreFailed(int code, String description, String manifestUrl) {
-    Log.d(TAG, "License restore failed for manifest: " + manifestUrl + " code: " + code);
+    dispatchPlayerLog("License restore failed for manifest: " + manifestUrl + " code: " + code);
     onNoOfflineLicenseFound(manifestUrl, code);
   }
 
@@ -395,7 +420,7 @@ class DemoPlayer implements ExoPlayer.EventListener, VideoListener, TextOutput, 
   // Called when offline license is acquired. Player can now be properly prepared
   @SuppressWarnings("unused")
   public void onOfflineLicenseAcquired(String manifestUrl, byte[] keyIds) {
-    Log.d(TAG, "Offline license acquired.");
+    dispatchPlayerLog("Offline license acquired.");
     // Offline license acquired. Starting in MODE_QUERY
     mDrmSessionManager.setMode(DefaultDrmSessionManager.MODE_QUERY, keyIds);
     startPlayerPrepare();
@@ -403,10 +428,11 @@ class DemoPlayer implements ExoPlayer.EventListener, VideoListener, TextOutput, 
 
   // Called when no offline license is found.
   public void onNoOfflineLicenseFound(String manifestUrl, int licenseErrorCode) {
-    Log.d(TAG, "No offline license found.");
+    dispatchPlayerLog("No offline license found.");
     DrmMessage drmMessage = null;
-    if (!TextUtils.isEmpty(mParams.axDrmMessage)) {
-      drmMessage = DrmUtils.parseDrmString(mParams.axDrmMessage);
+    MediaItem.DrmConfiguration drmConfiguration = Utility.getDrmConfiguration(mParams.mediaItem);
+    if (drmConfiguration != null && !TextUtils.isEmpty(drmConfiguration.requestHeaders.get("X-AxDRM-Message"))) {
+      drmMessage = DrmUtils.parseDrmString(drmConfiguration.requestHeaders.get("X-AxDRM-Message"));
       if (drmMessage == null) {
         dispatchPlayerErrorMessage(mContext.getString(R.string.error_drm_token_parse));
         return;
@@ -414,7 +440,7 @@ class DemoPlayer implements ExoPlayer.EventListener, VideoListener, TextOutput, 
     }
     // Check that if license persistent flag is true, then we can try to download license
     if (drmMessage != null && drmMessage.persistent) {
-      Log.d(TAG, "Drm message has persistent flag");
+      dispatchPlayerLog("Drm message has persistent flag");
       if (!hasConnection()) {
         if (licenseErrorCode == LicenseManagerErrorCode.ERROR_308.getCode()) {
           dispatchPlayerErrorMessage(mContext.getString(R.string.error_drm_keys_expired));
@@ -424,13 +450,13 @@ class DemoPlayer implements ExoPlayer.EventListener, VideoListener, TextOutput, 
         return;
       }
 
-      if (TextUtils.isEmpty(mParams.licenseServer)) {
+      if (TextUtils.isEmpty((CharSequence) drmConfiguration.licenseUri)) {
         dispatchPlayerErrorMessage(mContext.getString(R.string.error_license_server));
         return;
       }
-      Log.d(TAG, "Trying to download and save license.");
-      mOfflineLicenseManager.downloadLicenseWithResult(
-              mParams.licenseServer, manifestUrl, mParams.axDrmMessage, true);
+      dispatchPlayerLog("Trying to download and save license.");
+      mOfflineLicenseManager.downloadLicenseWithResult(String.valueOf(drmConfiguration.licenseUri),
+              manifestUrl, drmConfiguration.requestHeaders.get("X-AxDRM-Message"), true);
     } else {
       dispatchPlayerErrorMessage(mContext.getString(R.string.error_drm_message_not_persistent));
     }
@@ -444,6 +470,28 @@ class DemoPlayer implements ExoPlayer.EventListener, VideoListener, TextOutput, 
   private boolean hasConnection() {
     final ConnectivityManager cm = (ConnectivityManager) mContext.getApplicationContext()
             .getSystemService(Context.CONNECTIVITY_SERVICE);
-    return (cm != null && cm.getActiveNetworkInfo() != null);
+    boolean hasConnection = (cm != null && cm.getActiveNetworkInfo() != null);
+    dispatchPlayerLog("Device has network connection: " + hasConnection);
+    return hasConnection;
+  }
+
+  // Method for deleting currently playing video.
+  public void onDeletePressed() {
+    dispatchPlayerLog("Deleting the currently playing content.");
+    AxDownloadTracker axDownloadTracker = AxOfflineManager.getInstance().getDownloadTracker();
+    if (axDownloadTracker != null && axDownloadTracker.isDownloaded(
+            String.valueOf(Utility.getPlaybackProperties(mParams.mediaItem).uri))) {
+      // License is removed for the selected video
+      if (mOfflineLicenseManager != null) {
+        mOfflineLicenseManager = new OfflineLicenseManager(mContext);
+        mOfflineLicenseManager.setEventListener(this);
+        mOfflineLicenseManager.releaseLicense(
+                String.valueOf(Utility.getPlaybackProperties(mParams.mediaItem).uri));
+      }
+      // Removes a download
+      DownloadService.sendRemoveDownload(mContext, AxDownloadService.class,
+              axDownloadTracker.getDownloadRequest(
+                      Utility.getPlaybackProperties(mParams.mediaItem).uri).id, false);
+    }
   }
 }

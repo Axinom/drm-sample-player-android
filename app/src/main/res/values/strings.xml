@@ -20,7 +20,8 @@
     <string name="play_offline">Play offline</string>
     <string name="remove_license">Remove license</string>
     <string name="remove_all">Remove all licenses</string>
-    <string name="available_offline">Available offline. Content is downloaded and license is valid.</string>
+    <string name="available_offline_protected">Available offline. Content is downloaded and license is valid.</string>
+    <string name="available_offline_not_protected">Available offline. Content is downloaded.</string>
     <string name="not_available_offline">Not available offline.</string>
     <string name="not_available_offline_not_downloaded">Not available offline. Not downloaded.</string>
     <string name="not_available_offline_license_not_valid">Not available offline. Content is downloaded but license is not valid.</string>
@@ -28,12 +29,29 @@
     <string name="error_no_connection_for_downloading">No network connection</string>
     <string name="error_sample_videos_list_empty">Sample videos list is empty</string>
     <string name="error_format_not_supported">Format not supported</string>
-    <string name="player_online_playback">Online playback</string>
-    <string name="player_offline_playback">Offline playback</string>
+    <string name="player_online_playback">ONLINE PLAYBACK</string>
+    <string name="player_offline_playback">OFFLINE PLAYBACK</string>
+    <string name="player_console_button_text">CONSOLE</string>
+    <string name="player_delete_button_text">DELETE</string>
+    <string name="player_console_copy_button_text">COPY</string>
+    <string name="player_console_clear_button_text">CLEAR</string>
     <string name="error_offline_playback">Problem starting offline playback.</string>
     <string name="error_drm_token_parse">DRM token has incorrect format and cannot be parsed.</string>
     <string name="error_drm_keys_expired">Offline DRM keys are expired.</string>
     <string name="error_no_connection_for_license_download">Offline license cannot be downloaded. No connection.</string>
     <string name="error_license_server">Offline license cannot be downloaded. Check that licence server is correct.</string>
     <string name="error_drm_message_not_persistent">Offline license cannot be downloaded. Drm message persistent flag is not true.</string>
+
+    <string name="license_player_error_300">DRM scheme is not supported by current Android SDK</string>
+    <string name="license_player_error_301">No supported DRM scheme found. Details: %s</string>
+    <string name="license_player_error_302">DRM session error. Details: %s</string>
+    <string name="license_player_error_303">License file read/write exception: %s</string>
+    <string name="license_player_error_304">Error while reading manifest from .tar file: %s</string>
+    <string name="license_player_error_305">Cannot delete all licenses. Exception: %s</string>
+    <string name="license_player_error_306">Cannot parse DRM message</string>
+    <string name="license_player_error_307">DRM message has no persistent flag</string>
+    <string name="license_player_error_308">DRM license expired or will expire soon</string>
+    <string name="license_player_error_309">Device provisioning failed</string>
+    <string name="license_player_error_310">Asset is not DRM-protected</string>
+    <string name="license_player_error_311">DRM license is not valid (begin_date is in future)</string>
 </resources>

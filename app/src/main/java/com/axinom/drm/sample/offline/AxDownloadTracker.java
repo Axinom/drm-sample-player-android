@@ -3,8 +3,8 @@ package com.axinom.drm.sample.offline;
 import android.content.Context;
 import android.net.Uri;
 
-import com.google.android.exoplayer2.C;
 import com.google.android.exoplayer2.DefaultRenderersFactory;
+import com.google.android.exoplayer2.MediaItem;
 import com.google.android.exoplayer2.RenderersFactory;
 import com.google.android.exoplayer2.offline.Download;
 import com.google.android.exoplayer2.offline.DownloadCursor;
@@ -150,10 +150,10 @@ public class AxDownloadTracker {
     }
 
     // Returns DownloadHelper
-    public DownloadHelper getDownloadHelper(Uri uri, Context context) {
+    public DownloadHelper getDownloadHelper(MediaItem mediaItem, Context context) {
         if (mDownloadHelper == null) {
             try {
-                mDownloadHelper = getDownloadHelper(uri, new DefaultRenderersFactory(context));
+                mDownloadHelper = getDownloadHelper(mediaItem, new DefaultRenderersFactory(context));
             } catch (Exception e) {
                 e.printStackTrace();
             }
@@ -169,29 +169,18 @@ public class AxDownloadTracker {
         }
     }
 
-    // Creates a DownloadHelper according to the video format
+    // Creates a DownloadHelper
     private DownloadHelper getDownloadHelper(
-            Uri uri, RenderersFactory renderersFactory) {
-        int type = Util.inferContentType(uri);
-        switch (type) {
-            case C.TYPE_DASH:
-                return DownloadHelper.forDash(mContext, uri, mDataSourceFactory, renderersFactory);
-            case C.TYPE_SS:
-                return DownloadHelper.forSmoothStreaming(mContext, uri, mDataSourceFactory, renderersFactory);
-            case C.TYPE_HLS:
-                return DownloadHelper.forHls(mContext, uri, mDataSourceFactory, renderersFactory);
-            case C.TYPE_OTHER:
-                return DownloadHelper.forProgressive(mContext, uri);
-            default:
-                throw new IllegalStateException("Unsupported type: " + type);
-        }
+            MediaItem mediaItem, RenderersFactory renderersFactory) {
+        return DownloadHelper.forMediaItem(mContext, mediaItem, renderersFactory, mDataSourceFactory);
     }
 
     // For listening download changes and sending callbacks notifying about them
     private class DownloadManagerListener implements DownloadManager.Listener {
 
         @Override
-        public void onDownloadChanged(DownloadManager downloadManager, Download download) {
+        public void onDownloadChanged(
+                DownloadManager downloadManager, Download download, Exception exception) {
             mDownloads.put(download.request.uri, download);
             for (Listener listener : mListeners) {
                 listener.onDownloadsChanged(download.state);

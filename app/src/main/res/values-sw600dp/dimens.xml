@@ -6,13 +6,13 @@
     <dimen name="button_height">30dp</dimen>
     <dimen name="offline_availability_text_size">20sp</dimen>
     <dimen name="download_progress_text_size">20sp</dimen>
-    <dimen name="player_console_button_width">90dp</dimen>
-    <dimen name="player_console_button_height">40dp</dimen>
-    <dimen name="player_console_horizontal_margin">95dp</dimen>
-    <dimen name="player_console_vertical_margin">80dp</dimen>
-    <dimen name="player_console_copy_button_width">80dp</dimen>
-    <dimen name="player_console_copy_button_height">40dp</dimen>
+    <dimen name="player_console_button_width">100dp</dimen>
+    <dimen name="player_console_button_height">100dp</dimen>
+    <dimen name="player_console_horizontal_margin">105dp</dimen>
+    <dimen name="player_console_vertical_margin">120dp</dimen>
+    <dimen name="player_console_copy_button_width">100dp</dimen>
+    <dimen name="player_console_copy_button_height">50dp</dimen>
     <dimen name="player_console_copy_layout_margin">10dp</dimen>
     <dimen name="player_console_output_text_padding">10dp</dimen>
-    <dimen name="player_console_output_text_size">14sp</dimen>
+    <dimen name="player_console_output_text_size">16sp</dimen>
 </resources>

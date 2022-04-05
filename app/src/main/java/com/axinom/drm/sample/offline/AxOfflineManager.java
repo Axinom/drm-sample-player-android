@@ -9,21 +9,19 @@ import com.google.android.exoplayer2.offline.ActionFileUpgradeUtil;
 import com.google.android.exoplayer2.offline.DefaultDownloadIndex;
 import com.google.android.exoplayer2.offline.DefaultDownloaderFactory;
 import com.google.android.exoplayer2.offline.DownloadManager;
-import com.google.android.exoplayer2.offline.DownloaderConstructorHelper;
 import com.google.android.exoplayer2.upstream.DataSource;
 import com.google.android.exoplayer2.upstream.DefaultDataSourceFactory;
 import com.google.android.exoplayer2.upstream.DefaultHttpDataSourceFactory;
-import com.google.android.exoplayer2.upstream.FileDataSource;
 import com.google.android.exoplayer2.upstream.HttpDataSource;
 import com.google.android.exoplayer2.upstream.cache.Cache;
 import com.google.android.exoplayer2.upstream.cache.CacheDataSource;
-import com.google.android.exoplayer2.upstream.cache.CacheDataSourceFactory;
 import com.google.android.exoplayer2.upstream.cache.NoOpCacheEvictor;
 import com.google.android.exoplayer2.upstream.cache.SimpleCache;
 import com.google.android.exoplayer2.util.Log;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.concurrent.Executors;
 
 /**
  * A class that manages the initialization of DownloadManager and data source factory objects.
@@ -76,10 +74,10 @@ public class AxOfflineManager {
             DefaultDownloadIndex downloadIndex = new DefaultDownloadIndex(getDatabaseProvider(context));
             upgradeActionFile(DOWNLOAD_ACTION_FILE, downloadIndex, false);
             upgradeActionFile(DOWNLOAD_TRACKER_ACTION_FILE, downloadIndex, true);
-            DownloaderConstructorHelper downloaderConstructorHelper =
-                    new DownloaderConstructorHelper(getDownloadCache(context), buildHttpDataSourceFactory());
             mDownloadManager = new DownloadManager(context.getApplicationContext(), downloadIndex,
-                    new DefaultDownloaderFactory(downloaderConstructorHelper));
+                    new DefaultDownloaderFactory(buildReadOnlyCacheDataSource(
+                            new DefaultDataSourceFactory(context, buildHttpDataSourceFactory()),
+                            getDownloadCache(context)), Executors.newFixedThreadPool(6)));
             mDownloadTracker = new AxDownloadTracker(context, buildDataSourceFactory(context),
                     mDownloadManager);
         }
@@ -126,15 +124,11 @@ public class AxOfflineManager {
         return new DefaultHttpDataSourceFactory(USER_AGENT);
     }
 
-    private static CacheDataSourceFactory buildReadOnlyCacheDataSource(
+    private static CacheDataSource.Factory buildReadOnlyCacheDataSource(
             DataSource.Factory upstreamFactory, Cache cache) {
-        return new CacheDataSourceFactory(
-                cache,
-                upstreamFactory,
-                new FileDataSource.Factory(),
-                null,
-                CacheDataSource.FLAG_IGNORE_CACHE_ON_ERROR,
-                null);
+        return new CacheDataSource.Factory()
+                .setCache(cache)
+                .setUpstreamDataSourceFactory(upstreamFactory);
     }
 
     private DatabaseProvider getDatabaseProvider(Context context) {
