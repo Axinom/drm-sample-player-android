@@ -4,12 +4,26 @@ android {
     compileSdkVersion 29
     buildToolsVersion "29.0.2"
 
+    def propsFile = file("../gradle.properties")
+    Properties props = new Properties()
+
+    Integer versionInteger = 100
+    String versionString = "1.0"
+
+    if (propsFile.canRead()) {
+        props.load(new FileInputStream(propsFile))
+        versionInteger = props["version.integer"].toInteger()
+        versionString = props["version.string"].toString()
+    } else {
+        throw new GradleException("Could not read gradle.properties!")
+    }
+
     defaultConfig {
         applicationId "com.axinom.drm.sample"
         minSdkVersion 19
         targetSdkVersion 29
-        versionCode 1
-        versionName "1.0"
+        versionCode versionInteger
+        versionName versionString
     }
     buildTypes {
         release {
