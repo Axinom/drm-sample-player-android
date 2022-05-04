@@ -2,25 +2,21 @@ package com.axinom.drm.sample.offline;
 
 import android.content.Context;
 import android.os.Environment;
+import android.util.Log;
 
 import com.google.android.exoplayer2.database.DatabaseProvider;
-import com.google.android.exoplayer2.database.ExoDatabaseProvider;
-import com.google.android.exoplayer2.offline.ActionFileUpgradeUtil;
-import com.google.android.exoplayer2.offline.DefaultDownloadIndex;
-import com.google.android.exoplayer2.offline.DefaultDownloaderFactory;
+import com.google.android.exoplayer2.database.StandaloneDatabaseProvider;
 import com.google.android.exoplayer2.offline.DownloadManager;
 import com.google.android.exoplayer2.upstream.DataSource;
-import com.google.android.exoplayer2.upstream.DefaultDataSourceFactory;
-import com.google.android.exoplayer2.upstream.DefaultHttpDataSourceFactory;
+import com.google.android.exoplayer2.upstream.DefaultDataSource;
+import com.google.android.exoplayer2.upstream.DefaultHttpDataSource;
 import com.google.android.exoplayer2.upstream.HttpDataSource;
 import com.google.android.exoplayer2.upstream.cache.Cache;
 import com.google.android.exoplayer2.upstream.cache.CacheDataSource;
 import com.google.android.exoplayer2.upstream.cache.NoOpCacheEvictor;
 import com.google.android.exoplayer2.upstream.cache.SimpleCache;
-import com.google.android.exoplayer2.util.Log;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.concurrent.Executors;
 
 /**
@@ -29,9 +25,6 @@ import java.util.concurrent.Executors;
 public class AxOfflineManager {
 
     private static final String TAG = AxOfflineManager.class.getSimpleName();
-    private static final String USER_AGENT = "axSdk";
-    private static final String DOWNLOAD_ACTION_FILE = "actions";
-    private static final String DOWNLOAD_TRACKER_ACTION_FILE = "tracked_actions";
     private static AxOfflineManager sAxOfflineManager;
     private DatabaseProvider databaseProvider;
     private File mDownloadDirectory;
@@ -69,37 +62,24 @@ public class AxOfflineManager {
 
     // Initializing of AxOfflineManager
     public synchronized void init(Context context, File folder) {
+        Log.d(TAG, "init() called with: context = [" + context + "], folder = [" + folder + "]");
         if (mDownloadManager == null) {
             mDownloadDirectory = folder;
-            DefaultDownloadIndex downloadIndex = new DefaultDownloadIndex(getDatabaseProvider(context));
-            upgradeActionFile(DOWNLOAD_ACTION_FILE, downloadIndex, false);
-            upgradeActionFile(DOWNLOAD_TRACKER_ACTION_FILE, downloadIndex, true);
-            mDownloadManager = new DownloadManager(context.getApplicationContext(), downloadIndex,
-                    new DefaultDownloaderFactory(buildReadOnlyCacheDataSource(
-                            new DefaultDataSourceFactory(context, buildHttpDataSourceFactory()),
-                            getDownloadCache(context)), Executors.newFixedThreadPool(6)));
+            mDownloadManager = new DownloadManager(
+                    context.getApplicationContext(),
+                    getDatabaseProvider(context),
+                    getDownloadCache(context),
+                    buildHttpDataSourceFactory(),
+                    Executors.newFixedThreadPool(6));
             mDownloadTracker = new AxDownloadTracker(context, buildDataSourceFactory(context),
                     mDownloadManager);
-        }
-    }
-
-    private void upgradeActionFile(String fileName, DefaultDownloadIndex downloadIndex,
-                                   boolean addNewDownloadsAsCompleted) {
-        try {
-            ActionFileUpgradeUtil.upgradeAndDelete(
-                    new File(getDownloadDirectory(), fileName),
-                    null,
-                    downloadIndex,
-                    true,
-                    addNewDownloadsAsCompleted);
-        } catch (IOException e) {
-            Log.e(TAG, "Failed to upgrade action file: " + fileName, e);
         }
     }
 
     private File getDownloadDirectory() {
         if (mDownloadDirectory == null) {
             mDownloadDirectory = new File(DEFAULT_DOWNLOADS_FOLDER);
+            Log.d(TAG, "Setting value to mDownloadDirectory: " + mDownloadDirectory);
         }
         return mDownloadDirectory;
     }
@@ -114,14 +94,14 @@ public class AxOfflineManager {
 
     // Returns a {@link DataSource.Factory}
     public DataSource.Factory buildDataSourceFactory(Context context) {
-        DefaultDataSourceFactory upstreamFactory =
-                new DefaultDataSourceFactory(context, buildHttpDataSourceFactory());
+        DefaultDataSource.Factory upstreamFactory =
+                new DefaultDataSource.Factory(context, buildHttpDataSourceFactory());
         return buildReadOnlyCacheDataSource(upstreamFactory, getDownloadCache(context));
     }
 
     // Returns a {@link HttpDataSource.Factory}
     private HttpDataSource.Factory buildHttpDataSourceFactory() {
-        return new DefaultHttpDataSourceFactory(USER_AGENT);
+        return new DefaultHttpDataSource.Factory();
     }
 
     private static CacheDataSource.Factory buildReadOnlyCacheDataSource(
@@ -133,7 +113,7 @@ public class AxOfflineManager {
 
     private DatabaseProvider getDatabaseProvider(Context context) {
         if (databaseProvider == null) {
-            databaseProvider = new ExoDatabaseProvider(context.getApplicationContext());
+            databaseProvider = new StandaloneDatabaseProvider(context.getApplicationContext());
         }
         return databaseProvider;
     }

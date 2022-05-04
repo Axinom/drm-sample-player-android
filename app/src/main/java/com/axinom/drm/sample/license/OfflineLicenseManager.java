@@ -2,6 +2,7 @@ package com.axinom.drm.sample.license;
 
 import android.content.Context;
 import android.os.AsyncTask;
+import android.util.Log;
 
 import com.axinom.drm.sample.license.interfaces.IOfflineLicenseManagerListener;
 import com.axinom.drm.sample.license.internal.task.LicenceDownloadTask;
@@ -17,6 +18,8 @@ import java.util.Map;
  */
 public class OfflineLicenseManager {
 
+    private static final String TAG = OfflineLicenseManager.class.getSimpleName();
+
     private final String mDefaultStoragePath;
     private Context mContext;
     private IOfflineLicenseManagerListener mListener;
@@ -31,7 +34,7 @@ public class OfflineLicenseManager {
     private Map<String, String> mRequestParams = null;
 
     /**
-     * Create an instance of OfflinePlaybackManager
+     * Create an instance of OfflineLicenseManager
      *
      * @param context reference for the application context
      */
@@ -39,10 +42,12 @@ public class OfflineLicenseManager {
         mContext = context;
         mDefaultStoragePath = context.getFilesDir().getAbsolutePath();
         mInternalListener = new InternalListener();
+        Log.d(TAG, "Initializing OfflineLicenseManager, " +
+                "setting value to mDefaultStoragePath = [" + mDefaultStoragePath + "]");
     }
 
     /**
-     * Set OfflinePlaybackManager Event Listener
+     * Set OfflineLicenseManager Event Listener
      *
      * @param listener object which implements EventListener
      */
@@ -51,7 +56,7 @@ public class OfflineLicenseManager {
     }
 
     /**
-     * Dispose all components of the OfflinePlaybackManager to prevent memory leaks
+     * Dispose all components of the OfflineLicenseManager to prevent memory leaks
      */
     public void release() {
         cancelDownloadTask();

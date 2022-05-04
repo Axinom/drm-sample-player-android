@@ -54,6 +54,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 
 /**
  *	An activity for selecting samples.
@@ -85,7 +86,7 @@ public class SampleChooserActivity extends Activity implements View.OnClickListe
 	private DownloadHelper mDownloadHelper;
 
 	// For receiving broadcasts about download progress
-	private BroadcastReceiver mBroadcastReceiver = new BroadcastReceiver() {
+	private final BroadcastReceiver mBroadcastReceiver = new BroadcastReceiver() {
 		@Override
 		public void onReceive(Context context, Intent intent) {
 			if (intent != null && intent.getExtras() != null) {
@@ -413,7 +414,7 @@ public class SampleChooserActivity extends Activity implements View.OnClickListe
 			mLicenseManager.downloadLicenseWithResult(
 					String.valueOf(drmConfiguration.licenseUri),
 					String.valueOf(Utility.getPlaybackProperties(mediaItem).uri),
-					drmConfiguration.requestHeaders.get("X-AxDRM-Message"),
+					drmConfiguration.licenseRequestHeaders.get("X-AxDRM-Message"),
 					true
 			);
 		}
@@ -442,7 +443,7 @@ public class SampleChooserActivity extends Activity implements View.OnClickListe
 			mLicenseManager.downloadLicense(
 					String.valueOf(drmConfiguration.licenseUri),
 					String.valueOf(Utility.getPlaybackProperties(mediaItem).uri),
-					drmConfiguration.requestHeaders.get("X-AxDRM-Message"));
+					drmConfiguration.licenseRequestHeaders.get("X-AxDRM-Message"));
 		}
 	}
 
@@ -477,7 +478,6 @@ public class SampleChooserActivity extends Activity implements View.OnClickListe
 					JSONObject jsonObject = jsonArray.getJSONObject(i);
 					MediaItem.Builder mediaItemBuilder = new MediaItem.Builder();
 					if (jsonObject.has("title")) {
-//						mediaItemBuilder.setMediaId(jsonObject.getString("title"));
 						mediaItemBuilder.setMediaMetadata(new MediaMetadata.Builder().setTitle(
 								jsonObject.getString("title")).build());
 					}
@@ -485,15 +485,20 @@ public class SampleChooserActivity extends Activity implements View.OnClickListe
 						mediaItemBuilder.setUri(jsonObject.getString("videoUrl"));
 					}
 					if (jsonObject.has("drmScheme")) {
-						mediaItemBuilder.setDrmUuid(Util.getDrmUuid(jsonObject.getString("drmScheme")));
+						UUID drmUuid = Util.getDrmUuid(jsonObject.getString("drmScheme"));
+						MediaItem.DrmConfiguration.Builder drmConfigurationBuilder
+								= new MediaItem.DrmConfiguration.Builder(drmUuid);
 						if (jsonObject.has("licenseServer")) {
-							mediaItemBuilder.setDrmLicenseUri(jsonObject.getString("licenseServer"));
+							drmConfigurationBuilder.setLicenseUri(
+									jsonObject.getString("licenseServer"));
 						}
 						if (jsonObject.has("licenseToken")) {
 							Map<String, String> requestHeaders = new HashMap<>();
-							requestHeaders.put("X-AxDRM-Message", jsonObject.getString("licenseToken"));
-							mediaItemBuilder.setDrmLicenseRequestHeaders(requestHeaders);
+							requestHeaders.put("X-AxDRM-Message",
+									jsonObject.getString("licenseToken"));
+							drmConfigurationBuilder.setLicenseRequestHeaders(requestHeaders);
 						}
+						mediaItemBuilder.setDrmConfiguration(drmConfigurationBuilder.build());
 					}
 					MediaItem mediaItem = mediaItemBuilder.build();
 					mMediaItems.add(mediaItem);
@@ -518,9 +523,12 @@ public class SampleChooserActivity extends Activity implements View.OnClickListe
 		intent.setData(Utility.getPlaybackProperties(getMediaItem(position)).uri);
 		MediaItem.DrmConfiguration drmConfiguration = Utility.getDrmConfiguration(getMediaItem(position));
 		if (drmConfiguration != null) {
-			intent.putExtra(PlayerActivity.DRM_SCHEME, Utility.getDrmSchemeFromUuid(drmConfiguration.uuid));
-			intent.putExtra(PlayerActivity.LICENSE_TOKEN, drmConfiguration.requestHeaders.get("X-AxDRM-Message"));
-			intent.putExtra(PlayerActivity.WIDEVINE_LICENSE_SERVER, String.valueOf(drmConfiguration.licenseUri));
+			intent.putExtra(PlayerActivity.DRM_SCHEME,
+					Utility.getDrmSchemeFromUuid(drmConfiguration.scheme));
+			intent.putExtra(PlayerActivity.LICENSE_TOKEN,
+					drmConfiguration.licenseRequestHeaders.get("X-AxDRM-Message"));
+			intent.putExtra(PlayerActivity.WIDEVINE_LICENSE_SERVER,
+					String.valueOf(drmConfiguration.licenseUri));
 		}
 		intent.putExtra(PlayerActivity.SHOULD_PLAY_OFFLINE, shouldPlayOffline);
 		startActivity(intent);

@@ -65,11 +65,10 @@ public class AxDownloadService extends DownloadService {
     }
 
     // Returns a notification to be displayed
-    @NonNull
     @Override
-    protected Notification getForegroundNotification(@NonNull List<Download> downloads) {
+    protected Notification getForegroundNotification(List<Download> downloads, int i) {
         Notification notification = notificationHelper.buildProgressNotification(this,
-                R.drawable.ic_download, null, null, downloads);
+                R.drawable.ic_download, null, null, downloads, i);
         if (notification.extras != null) {
             // Notification about download progress is sent here
             sendNotification(notification.extras.getInt(Notification.EXTRA_PROGRESS));

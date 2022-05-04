@@ -20,12 +20,11 @@ import com.axinom.drm.sample.offline.AxOfflineManager;
 import com.axinom.drm.sample.util.Utility;
 import com.google.android.exoplayer2.C;
 import com.google.android.exoplayer2.DefaultRenderersFactory;
-import com.google.android.exoplayer2.ExoPlaybackException;
 import com.google.android.exoplayer2.ExoPlayer;
 import com.google.android.exoplayer2.Format;
 import com.google.android.exoplayer2.MediaItem;
+import com.google.android.exoplayer2.PlaybackException;
 import com.google.android.exoplayer2.Player;
-import com.google.android.exoplayer2.SimpleExoPlayer;
 import com.google.android.exoplayer2.drm.DefaultDrmSessionManager;
 import com.google.android.exoplayer2.drm.FrameworkMediaDrm;
 import com.google.android.exoplayer2.drm.HttpMediaDrmCallback;
@@ -44,14 +43,12 @@ import com.google.android.exoplayer2.text.TextOutput;
 import com.google.android.exoplayer2.trackselection.DefaultTrackSelector;
 import com.google.android.exoplayer2.trackselection.TrackSelection;
 import com.google.android.exoplayer2.trackselection.TrackSelectionArray;
-import com.google.android.exoplayer2.ui.PlayerView;
+import com.google.android.exoplayer2.ui.StyledPlayerView;
 import com.google.android.exoplayer2.upstream.DataSource;
-import com.google.android.exoplayer2.upstream.DefaultBandwidthMeter;
-import com.google.android.exoplayer2.upstream.DefaultDataSourceFactory;
-import com.google.android.exoplayer2.upstream.DefaultHttpDataSourceFactory;
+import com.google.android.exoplayer2.upstream.DefaultDataSource;
+import com.google.android.exoplayer2.upstream.DefaultHttpDataSource;
 import com.google.android.exoplayer2.upstream.HttpDataSource;
 import com.google.android.exoplayer2.util.Util;
-import com.google.android.exoplayer2.video.VideoListener;
 
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -59,7 +56,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 /**
  * A wrapper around {@link ExoPlayer} that provides a higher level interface.
  */
-class DemoPlayer implements ExoPlayer.EventListener, VideoListener, TextOutput, IOfflineLicenseManagerListener {
+class DemoPlayer implements TextOutput, IOfflineLicenseManagerListener, Player.Listener {
 
   // Parameters used to initialize the player
   public static class Params {
@@ -80,9 +77,8 @@ class DemoPlayer implements ExoPlayer.EventListener, VideoListener, TextOutput, 
   }
 
   private static final String TAG = DemoPlayer.class.getSimpleName();
-  private static final String PLAYER_APP_NAME = "ExoPlayerDemo";
 
-  private SimpleExoPlayer mPlayer;
+  private ExoPlayer mPlayer;
   private boolean mPlayerIsCreated = false;
   private Context mContext;
   // Manager class for offline licenses
@@ -94,8 +90,6 @@ class DemoPlayer implements ExoPlayer.EventListener, VideoListener, TextOutput, 
   private Params mParams;
   // A DrmSessionManager that supports playbacks using ExoMediaDrm
   private DefaultDrmSessionManager mDrmSessionManager;
-  // Estimates bandwidth by listening to data transfers
-  private DefaultBandwidthMeter mBandwidthMeter;
   // Media format
   private int mFormat;
 
@@ -113,7 +107,6 @@ class DemoPlayer implements ExoPlayer.EventListener, VideoListener, TextOutput, 
   // A method for creating player using predefined parameters
   private void playerCreate(Params params){
     dispatchPlayerLog("Creating the player");
-    mBandwidthMeter = new DefaultBandwidthMeter.Builder(mContext).setResetOnNetworkTypeChange(false).build();
     mMediaDataSourceFactory = buildDataSourceFactory();
     MediaItem.DrmConfiguration drmConfiguration = Utility.getDrmConfiguration(params.mediaItem);
     try {
@@ -124,8 +117,8 @@ class DemoPlayer implements ExoPlayer.EventListener, VideoListener, TextOutput, 
         throw new UnsupportedFormatException();
       }
       if (drmConfiguration != null) {
-        mDrmSessionManager = buildDrmSessionManager(mContext, String.valueOf(drmConfiguration.licenseUri),
-                drmConfiguration.requestHeaders.get("X-AxDRM-Message"));
+        mDrmSessionManager = buildDrmSessionManager(String.valueOf(drmConfiguration.licenseUri),
+                drmConfiguration.licenseRequestHeaders.get("X-AxDRM-Message"));
         // OfflineLicenseManager should be initialized and license keys received only if offline playback is required
         if (mParams.shouldPlayOffline) {
           mOfflineLicenseManager = new OfflineLicenseManager(mContext);
@@ -145,7 +138,7 @@ class DemoPlayer implements ExoPlayer.EventListener, VideoListener, TextOutput, 
     // Defining DefaultRenderersFactory for the player
     DefaultRenderersFactory renderersFactory = new DefaultRenderersFactory(mContext);
     try {
-      mPlayer = new SimpleExoPlayer.Builder(mContext, renderersFactory)
+      mPlayer = new ExoPlayer.Builder(mContext, renderersFactory)
               .setTrackSelector(trackSelector)
               .build();
       mPlayer.addListener(this);
@@ -178,8 +171,7 @@ class DemoPlayer implements ExoPlayer.EventListener, VideoListener, TextOutput, 
       dispatchPlayerErrorMessage(mContext.getString(R.string.error_offline_playback));
       return null;
     } else {
-      return new DefaultDataSourceFactory(mContext, mBandwidthMeter,
-              buildHttpDataSourceFactory(mContext, true));
+      return new DefaultDataSource.Factory(mContext, buildHttpDataSourceFactory());
     }
   }
 
@@ -218,35 +210,32 @@ class DemoPlayer implements ExoPlayer.EventListener, VideoListener, TextOutput, 
       return null;
     } else {
       dispatchPlayerLog(mContext.getString(R.string.player_online_playback));
-      String userAgent = Util.getUserAgent(context, PLAYER_APP_NAME);
-      DataSource.Factory dataSourceFactory = new DefaultDataSourceFactory(context, userAgent);
+      DataSource.Factory dataSourceFactory = new DefaultDataSource.Factory(context);
       if (mFormat == C.TYPE_DASH) {
         return new DashMediaSource.Factory(
                 new DefaultDashChunkSource.Factory(dataSourceFactory), dataSourceFactory)
-                .setDrmSessionManager(mDrmSessionManager)
+                .setDrmSessionManagerProvider(unusedMediaItem -> mDrmSessionManager)
                 .createMediaSource(mParams.mediaItem);
       } else {
         return new HlsMediaSource.Factory(
                 new DefaultHlsDataSourceFactory(dataSourceFactory))
-                .setDrmSessionManager(mDrmSessionManager)
+                .setDrmSessionManagerProvider(unusedMediaItem -> mDrmSessionManager)
                 .createMediaSource(mParams.mediaItem);
       }
     }
   }
 
   // A method for building HttpDataSource.Factory
-  private HttpDataSource.Factory buildHttpDataSourceFactory(Context context, boolean useBandwidthMeter) {
-    return new DefaultHttpDataSourceFactory(Util.getUserAgent(context,
-            PLAYER_APP_NAME), useBandwidthMeter ? mBandwidthMeter : null);
+  private HttpDataSource.Factory buildHttpDataSourceFactory() {
+    return new DefaultHttpDataSource.Factory();
   }
 
   // A method for building DrmSessionManager
-  private DefaultDrmSessionManager buildDrmSessionManager(Context context,
-                                                                          String licenseUrl, String drmToken) {
+  private DefaultDrmSessionManager buildDrmSessionManager(String licenseUrl, String drmToken) {
     dispatchPlayerLog("Building DrmSessionManager with licenseUrl = [" +
             licenseUrl + "] and drmToken = [" + drmToken + "]");
     HttpMediaDrmCallback drmCallback = new HttpMediaDrmCallback(licenseUrl,
-            buildHttpDataSourceFactory(context, false));
+            buildHttpDataSourceFactory());
     // Here the license token is attached to license request
     if (drmToken != null) {
         drmCallback.setKeyRequestProperty("X-AxDRM-Message", drmToken);
@@ -259,7 +248,7 @@ class DemoPlayer implements ExoPlayer.EventListener, VideoListener, TextOutput, 
   }
 
   // A method for preparing the player for creation
-  public void prepare(Params params, PlayerView playerView) {
+  public void prepare(Params params, StyledPlayerView playerView) {
     dispatchPlayerLog("Preparing the player for creation");
     mParams = params;
     playerRelease();
@@ -350,7 +339,7 @@ class DemoPlayer implements ExoPlayer.EventListener, VideoListener, TextOutput, 
   }
 
   @Override
-  public void onPlayerError(ExoPlaybackException exception) {
+  public void onPlayerError(@NonNull PlaybackException exception) {
     dispatchPlayerError(exception);
   }
 
@@ -431,8 +420,10 @@ class DemoPlayer implements ExoPlayer.EventListener, VideoListener, TextOutput, 
     dispatchPlayerLog("No offline license found.");
     DrmMessage drmMessage = null;
     MediaItem.DrmConfiguration drmConfiguration = Utility.getDrmConfiguration(mParams.mediaItem);
-    if (drmConfiguration != null && !TextUtils.isEmpty(drmConfiguration.requestHeaders.get("X-AxDRM-Message"))) {
-      drmMessage = DrmUtils.parseDrmString(drmConfiguration.requestHeaders.get("X-AxDRM-Message"));
+    if (drmConfiguration != null && !TextUtils.isEmpty(
+            drmConfiguration.licenseRequestHeaders.get("X-AxDRM-Message"))) {
+      drmMessage = DrmUtils.parseDrmString(
+              drmConfiguration.licenseRequestHeaders.get("X-AxDRM-Message"));
       if (drmMessage == null) {
         dispatchPlayerErrorMessage(mContext.getString(R.string.error_drm_token_parse));
         return;
@@ -456,7 +447,7 @@ class DemoPlayer implements ExoPlayer.EventListener, VideoListener, TextOutput, 
       }
       dispatchPlayerLog("Trying to download and save license.");
       mOfflineLicenseManager.downloadLicenseWithResult(String.valueOf(drmConfiguration.licenseUri),
-              manifestUrl, drmConfiguration.requestHeaders.get("X-AxDRM-Message"), true);
+              manifestUrl, drmConfiguration.licenseRequestHeaders.get("X-AxDRM-Message"), true);
     } else {
       dispatchPlayerErrorMessage(mContext.getString(R.string.error_drm_message_not_persistent));
     }

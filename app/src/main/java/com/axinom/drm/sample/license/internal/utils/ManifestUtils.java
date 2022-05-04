@@ -1,5 +1,7 @@
 package com.axinom.drm.sample.license.internal.utils;
 
+import static com.google.android.exoplayer2.util.Assertions.checkNotNull;
+
 import android.net.Uri;
 import android.text.TextUtils;
 import android.util.Base64;
@@ -13,7 +15,6 @@ import androidx.collection.LruCache;
 import com.axinom.drm.sample.license.internal.model.Manifest;
 import com.axinom.drm.sample.license.internal.model.SchemeData;
 import com.google.android.exoplayer2.C;
-import com.google.android.exoplayer2.ParserException;
 import com.google.android.exoplayer2.util.MimeTypes;
 import com.google.android.exoplayer2.util.Util;
 
@@ -31,8 +32,6 @@ import java.util.Objects;
 import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
-import static com.google.android.exoplayer2.util.Assertions.checkNotNull;
 
 
 /**
@@ -59,7 +58,7 @@ public class ManifestUtils {
     private static final Pattern REGEX_KEYFORMAT = Pattern.compile("KEYFORMAT=\"(.+?)\"");
     private static final String KEYFORMAT_IDENTITY = "identity";
 
-    private static LruCache<String, Manifest> manifestLruCache = new LruCache<>(10);
+    private static final LruCache<String, Manifest> manifestLruCache = new LruCache<>(10);
 
     /**
      * Adding specified manifest to LruCache
@@ -278,7 +277,7 @@ public class ManifestUtils {
     @Nullable
     private static SchemeData parseDrmSchemeData(
             String line, String keyFormat, Map<String, String> variableDefinitions)
-            throws ParserException {
+            throws IOException {
         String keyFormatVersions =
                 parseOptionalStringAttr(line, REGEX_KEYFORMATVERSIONS, "1", variableDefinitions);
         if (KEYFORMAT_WIDEVINE_PSSH_BINARY.equals(keyFormat)) {
@@ -327,12 +326,13 @@ public class ManifestUtils {
 
     private static String parseStringAttr(
             String line, Map<String, String> variableDefinitions)
-            throws ParserException {
+            throws IOException {
         String value = parseOptionalStringAttr(line, variableDefinitions);
         if (value != null) {
             return value;
         } else {
-            throw new ParserException("Couldn't match " + ManifestUtils.REGEX_URI.pattern() + " in " + line);
+            throw new IOException(
+                    "Couldn't match " + ManifestUtils.REGEX_URI.pattern() + " in " + line);
         }
     }
 }

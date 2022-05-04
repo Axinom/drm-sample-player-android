@@ -25,9 +25,9 @@ public class Utility {
     }
 
     // Utility method for returning the PlaybackProperties of the media
-    public static MediaItem.PlaybackProperties getPlaybackProperties(MediaItem mediaItem) {
+    public static MediaItem.LocalConfiguration getPlaybackProperties(MediaItem mediaItem) {
         if (mediaItem != null) {
-            return mediaItem.playbackProperties;
+            return mediaItem.localConfiguration;
         } else {
             return null;
         }

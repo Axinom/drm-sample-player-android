@@ -28,7 +28,7 @@ import com.google.android.exoplayer2.MediaItem;
 import com.google.android.exoplayer2.drm.UnsupportedDrmException;
 import com.google.android.exoplayer2.mediacodec.MediaCodecRenderer;
 import com.google.android.exoplayer2.mediacodec.MediaCodecUtil;
-import com.google.android.exoplayer2.ui.PlayerView;
+import com.google.android.exoplayer2.ui.StyledPlayerView;
 import com.google.android.exoplayer2.util.Util;
 
 import java.net.CookieHandler;
@@ -36,6 +36,7 @@ import java.net.CookieManager;
 import java.net.CookiePolicy;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 
 /**
  * An activity that plays media using {@link DemoPlayer}.
@@ -65,7 +66,7 @@ public class PlayerActivity extends Activity implements DemoPlayer.Listener, Vie
   }
 
   // View for displaying video playback
-  private PlayerView mPlayerView;
+  private StyledPlayerView mPlayerView;
   // Console output layout frame
   private FrameLayout mConsoleOutputFrame;
   // ScrollView for console output
@@ -111,9 +112,13 @@ public class PlayerActivity extends Activity implements DemoPlayer.Listener, Vie
     if (intent.hasExtra(DRM_SCHEME)) {
       Map<String, String> requestHeaders = new HashMap<>();
       requestHeaders.put("X-AxDRM-Message", intent.getStringExtra(LICENSE_TOKEN));
-      mediaItemBuilder.setDrmUuid(Util.getDrmUuid(String.valueOf(intent.getStringExtra(DRM_SCHEME))))
-              .setDrmLicenseUri(intent.getStringExtra(WIDEVINE_LICENSE_SERVER))
-              .setDrmLicenseRequestHeaders(requestHeaders);
+      UUID drmUuid = Util.getDrmUuid(intent.getStringExtra(DRM_SCHEME));
+      MediaItem.DrmConfiguration.Builder drmConfigurationBuilder
+              = new MediaItem.DrmConfiguration.Builder(drmUuid);
+      drmConfigurationBuilder.setLicenseUri(
+              intent.getStringExtra(WIDEVINE_LICENSE_SERVER));
+      drmConfigurationBuilder.setLicenseRequestHeaders(requestHeaders);
+      mediaItemBuilder.setDrmConfiguration(drmConfigurationBuilder.build());
     }
     mMediaItem = mediaItemBuilder.build();
     if (intent.getExtras() != null) {
@@ -126,7 +131,7 @@ public class PlayerActivity extends Activity implements DemoPlayer.Listener, Vie
     MediaItem.DrmConfiguration drmConfiguration = Utility.getDrmConfiguration(mMediaItem);
     if (drmConfiguration != null) {
       log += "\nDRM scheme: " + intent.hasExtra(DRM_SCHEME)
-              + "\nLicense Token: " + drmConfiguration.requestHeaders.get("X-AxDRM-Message")
+              + "\nLicense Token: " + drmConfiguration.licenseRequestHeaders.get("X-AxDRM-Message")
               + "\nWidevine License Server: " + drmConfiguration.licenseUri;
     }
     writeToConsole(log);

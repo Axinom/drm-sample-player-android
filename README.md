@@ -2,7 +2,7 @@
 
 This is a sample project of an Android video player application. Its purpose is to provide a starting point for developers who want to implement a player application that includes support for Axinom DRM and offline playback.
 
-The application uses [ExoPlayer](https://github.com/google/ExoPlayer) to play MPEG-DASH and HLS streams protected using Axinom DRM. Additionally, it supports offline playback and implements functionality for downloading protected streams and persisting DRM licenses for later use.
+The application uses [ExoPlayer](https://github.com/google/ExoPlayer) version 2.17.1 to play MPEG-DASH and HLS streams protected using Axinom DRM. Additionally, it supports offline playback and implements functionality for downloading protected streams and persisting DRM licenses for later use.
 
 The application itself can be used for demonstration and testing purposes of the mentioned features. Details about the integration of Axinom DRM can be found in the source code. It contains explanatory comments and can be used as a development guide in addition to this README.
 
@@ -107,7 +107,7 @@ To play DRM videos in offline mode, the persistent license keys have to be saved
 To preserve an offline license, `"allow_persistence": true` flag needs to be present inside the DRM token.
 
 To download licenses, **OfflineLicenseManager** class is used.  
-This class contains functionality that is responsible for obtaining licenses and saving licenses' access keys to device internal storage.
+This class contains functionality that is responsible for obtaining licenses and saving licenses' access keys to device internal storage (path returned by the ).
 
 In general, the responsibilities of the OfflineLicenseManager class are:
 * Downloading a license
@@ -124,7 +124,7 @@ Initialize the AxOfflineManager:
 <pre><code class="Java">
 AxOfflineManager.getInstance().init(context);
 </code></pre>
-If no download folder path is specified then the default folder (external storage directory) is used.  
+If no download folder path is specified then the default folder (titled "downloads" and located in external storage directory) is used.  
 It is possible to set a custom folder by initializing the AxOfflineManager by providing the folder path:
 <pre><code class="Java">
 AxOfflineManager.getInstance().init(context, folder);
@@ -135,11 +135,12 @@ Start the download service:
 DownloadService.start(this, AxDownloadService.class);
 </code></pre>
 
-Initalize the OfflineLicenseManager object and start license download:
+Initialize the OfflineLicenseManager object and start license download:
 <pre><code class="Java">
-mOfflineLicenseManager = new OfflineLicenseManager(this);
+mOfflineLicenseManager = new OfflineLicenseManager(context);
 mOfflineLicenseManager.downloadLicenseWithResult(licenseServerUrl, manifestUrl, drmMessage, true)
 </code></pre>
+License download path is context.getFilesDir().getAbsolutePath() where context is the context used to create new instance of the OfflineLicenseManager.
 
 Retrieve DownloadTracker:
 <pre><code class="Java">
@@ -153,7 +154,7 @@ mDownloadHelper.prepare(this);
 </code></pre>
 
 Implement DownloadHelper.Callback interface and the required onPrepared() and onPreparedError() methods to listen to the DownloadHelper events.  
-After the onPrepared() event occurs, download processs can be started by calling the download() method that takes two parameters:  
+After the onPrepared() event occurs, download process can be started by calling the download() method that takes two parameters:  
 a description (for example the video title) and a 2-dimensional tracks (representations) array where tracks are defined in the following format: [periodIndex0, rendererIndex0, groupIndex0, trackIndex0, [], ...].  
 The format is based on MappedTrackInfo object that contains the mapped track information for each renderer (i.e. video, audio, text, etc.) with the same structure.
 
