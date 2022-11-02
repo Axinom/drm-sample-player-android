@@ -243,6 +243,7 @@ class DemoPlayer implements TextOutput, IOfflineLicenseManagerListener, Player.L
 
     return new DefaultDrmSessionManager.Builder()
             .setUuidAndExoMediaDrmProvider(C.WIDEVINE_UUID, FrameworkMediaDrm.DEFAULT_PROVIDER)
+            .setMultiSession(true)
             .build(drmCallback);
 
   }
