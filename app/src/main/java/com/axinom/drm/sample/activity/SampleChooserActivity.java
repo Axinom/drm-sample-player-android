@@ -12,6 +12,7 @@ import android.graphics.Color;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -107,30 +108,34 @@ public class SampleChooserActivity extends Activity implements View.OnClickListe
 										   @NonNull int[] grantResults) {
 		if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
 			// Can be initiated here, after permissions have been granted
-			AxOfflineManager.getInstance().init(this);
-
-			if (mAxDownloadTracker == null) {
-				mAxDownloadTracker = AxOfflineManager.getInstance().getDownloadTracker();
-			}
-			mAxDownloadTracker.addListener(this);
-
-			// Start the download service if it should be running but it's not currently.
-			// Starting the service in the foreground causes notification flicker if there is no scheduled
-			// action. Starting it in the background throws an exception if the app is in the background too
-			// (e.g. if device screen is locked).
-			if (isNetworkAvailable()) {
-				try {
-					DownloadService.start(this, AxDownloadService.class);
-				} catch (IllegalStateException e) {
-					DownloadService.startForeground(this, AxDownloadService.class);
-				}
-			}
-
-			checkCurrentDownloadStatus();
+			initOfflineManager();
 		} else {
 			Toast.makeText(getApplicationContext(), R.string.storage_permission_denied,
 					Toast.LENGTH_LONG).show();
 		}
+	}
+
+	private void initOfflineManager() {
+		AxOfflineManager.getInstance().init(this);
+
+		if (mAxDownloadTracker == null) {
+			mAxDownloadTracker = AxOfflineManager.getInstance().getDownloadTracker();
+		}
+		mAxDownloadTracker.addListener(this);
+
+		// Start the download service if it should be running but it's not currently.
+		// Starting the service in the foreground causes notification flicker if there is no scheduled
+		// action. Starting it in the background throws an exception if the app is in the background too
+		// (e.g. if device screen is locked).
+		if (isNetworkAvailable()) {
+			try {
+				DownloadService.start(this, AxDownloadService.class);
+			} catch (IllegalStateException e) {
+				DownloadService.startForeground(this, AxDownloadService.class);
+			}
+		}
+
+		checkCurrentDownloadStatus();
 	}
 
 	// A method for checking whether network is available
@@ -177,7 +182,11 @@ public class SampleChooserActivity extends Activity implements View.OnClickListe
 		// Initializing the OfflineLicenseManager
 		mLicenseManager = new OfflineLicenseManager(this);
 
-		requestPermissions();
+		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+			requestPermissions();
+		} else {
+			initOfflineManager();
+		}
 	}
 
 	class SampleAdapter extends RecyclerView.Adapter<SampleAdapter.ViewHolder> implements View.OnClickListener {
