@@ -39,6 +39,7 @@ import com.google.android.exoplayer2.source.dash.DefaultDashChunkSource;
 import com.google.android.exoplayer2.source.hls.DefaultHlsDataSourceFactory;
 import com.google.android.exoplayer2.source.hls.HlsMediaSource;
 import com.google.android.exoplayer2.text.Cue;
+import com.google.android.exoplayer2.text.CueGroup;
 import com.google.android.exoplayer2.text.TextOutput;
 import com.google.android.exoplayer2.trackselection.DefaultTrackSelector;
 import com.google.android.exoplayer2.trackselection.TrackSelection;
@@ -65,7 +66,6 @@ class DemoPlayer implements TextOutput, IOfflineLicenseManagerListener, Player.L
     boolean startOnPrepared = true;
     boolean shouldPlayOffline = false;
   }
-
   public static class UnsupportedFormatException extends Exception { }
 
   /**
@@ -113,13 +113,14 @@ class DemoPlayer implements TextOutput, IOfflineLicenseManagerListener, Player.L
       mPlayerIsCreated = false;
       // Only DASH and HLS formats are allowed for playback in this application
       mFormat = Util.inferContentType(Utility.getPlaybackProperties(params.mediaItem).uri);
-      if (mFormat != C.TYPE_DASH && mFormat != C.TYPE_HLS) {
+      if (mFormat != C.CONTENT_TYPE_DASH && mFormat != C.CONTENT_TYPE_HLS) {
         throw new UnsupportedFormatException();
       }
       if (drmConfiguration != null) {
         mDrmSessionManager = buildDrmSessionManager(String.valueOf(drmConfiguration.licenseUri),
                 drmConfiguration.licenseRequestHeaders.get("X-AxDRM-Message"));
-        // OfflineLicenseManager should be initialized and license keys received only if offline playback is required
+        // OfflineLicenseManager should be initialized and license keys received only if
+        // offline playback is required
         if (mParams.shouldPlayOffline) {
           mOfflineLicenseManager = new OfflineLicenseManager(mContext);
           mOfflineLicenseManager.setEventListener(this);
@@ -133,7 +134,8 @@ class DemoPlayer implements TextOutput, IOfflineLicenseManagerListener, Player.L
     }
     // Defining DefaultTrackSelector for the player
     DefaultTrackSelector trackSelector = new DefaultTrackSelector(mContext);
-    trackSelector.setParameters(new DefaultTrackSelector.ParametersBuilder(mContext).setPreferredTextLanguage("eng"));
+    trackSelector.setParameters(
+            new DefaultTrackSelector.Parameters.Builder(mContext).setPreferredTextLanguage("eng"));
 
     // Defining DefaultRenderersFactory for the player
     DefaultRenderersFactory renderersFactory = new DefaultRenderersFactory(mContext);
@@ -211,7 +213,7 @@ class DemoPlayer implements TextOutput, IOfflineLicenseManagerListener, Player.L
     } else {
       dispatchPlayerLog(mContext.getString(R.string.player_online_playback));
       DataSource.Factory dataSourceFactory = new DefaultDataSource.Factory(context);
-      if (mFormat == C.TYPE_DASH) {
+      if (mFormat == C.CONTENT_TYPE_DASH) {
         return new DashMediaSource.Factory(
                 new DefaultDashChunkSource.Factory(dataSourceFactory), dataSourceFactory)
                 .setDrmSessionManagerProvider(unusedMediaItem -> mDrmSessionManager)
@@ -344,10 +346,16 @@ class DemoPlayer implements TextOutput, IOfflineLicenseManagerListener, Player.L
     dispatchPlayerError(exception);
   }
 
-  // TextOutput implementation
+  // TextOutput deprecated implementation
   @Override
   public void onCues(@NonNull List<Cue> cues) {
-    dispatchPlayerLog("onCues() called with: cues = [" + cues + "]");
+    dispatchPlayerLog("deprecated onCues() called with: cues = [" + cues + "]");
+  }
+
+  // TextOutput implementation
+  @Override
+  public void onCues(CueGroup cueGroup) {
+    dispatchPlayerLog("onCues() called with: cues = [" + cueGroup.cues + "]");
   }
 
   @Override
