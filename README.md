@@ -2,7 +2,7 @@
 
 This is a sample project of an Android video player application. Its purpose is to provide a starting point for developers who want to implement a player application that includes support for Axinom DRM and offline playback.
 
-The application uses [ExoPlayer](https://github.com/google/ExoPlayer) version 2.17.1 to play MPEG-DASH and HLS streams protected using Axinom DRM. Additionally, it supports offline playback and implements functionality for downloading protected streams and persisting DRM licenses for later use.
+The application uses [ExoPlayer](https://github.com/google/ExoPlayer) version 2.18.5 to play MPEG-DASH and HLS streams protected using Axinom DRM. Additionally, it supports offline playback and implements functionality for downloading protected streams and persisting DRM licenses for later use.
 
 The application itself can be used for demonstration and testing purposes of the mentioned features. Details about the integration of Axinom DRM can be found in the source code. It contains explanatory comments and can be used as a development guide in addition to this README.
 

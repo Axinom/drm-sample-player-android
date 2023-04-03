@@ -214,15 +214,27 @@ class DemoPlayer implements TextOutput, IOfflineLicenseManagerListener, Player.L
       dispatchPlayerLog(mContext.getString(R.string.player_online_playback));
       DataSource.Factory dataSourceFactory = new DefaultDataSource.Factory(context);
       if (mFormat == C.CONTENT_TYPE_DASH) {
-        return new DashMediaSource.Factory(
-                new DefaultDashChunkSource.Factory(dataSourceFactory), dataSourceFactory)
-                .setDrmSessionManagerProvider(unusedMediaItem -> mDrmSessionManager)
-                .createMediaSource(mParams.mediaItem);
+        if (mDrmSessionManager != null) {
+          return new DashMediaSource.Factory(
+                  new DefaultDashChunkSource.Factory(dataSourceFactory), dataSourceFactory)
+                  .setDrmSessionManagerProvider(unusedMediaItem -> mDrmSessionManager)
+                  .createMediaSource(mParams.mediaItem);
+        } else {
+          return new DashMediaSource.Factory(
+                  new DefaultDashChunkSource.Factory(dataSourceFactory), dataSourceFactory)
+                  .createMediaSource(mParams.mediaItem);
+        }
       } else {
-        return new HlsMediaSource.Factory(
-                new DefaultHlsDataSourceFactory(dataSourceFactory))
-                .setDrmSessionManagerProvider(unusedMediaItem -> mDrmSessionManager)
-                .createMediaSource(mParams.mediaItem);
+        if (mDrmSessionManager != null) {
+          return new HlsMediaSource.Factory(
+                  new DefaultHlsDataSourceFactory(dataSourceFactory))
+                  .setDrmSessionManagerProvider(unusedMediaItem -> mDrmSessionManager)
+                  .createMediaSource(mParams.mediaItem);
+        } else {
+          return new HlsMediaSource.Factory(
+                  new DefaultHlsDataSourceFactory(dataSourceFactory))
+                  .createMediaSource(mParams.mediaItem);
+        }
       }
     }
   }

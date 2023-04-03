@@ -110,14 +110,17 @@ public class PlayerActivity extends Activity implements DemoPlayer.Listener, Vie
     writeToConsole("Handling intent = [" + intent + "]");
     MediaItem.Builder mediaItemBuilder = new MediaItem.Builder().setUri(intent.getData());
     if (intent.hasExtra(DRM_SCHEME)) {
-      Map<String, String> requestHeaders = new HashMap<>();
-      requestHeaders.put("X-AxDRM-Message", intent.getStringExtra(LICENSE_TOKEN));
       UUID drmUuid = Util.getDrmUuid(intent.getStringExtra(DRM_SCHEME));
       MediaItem.DrmConfiguration.Builder drmConfigurationBuilder
               = new MediaItem.DrmConfiguration.Builder(drmUuid);
       drmConfigurationBuilder.setLicenseUri(
               intent.getStringExtra(WIDEVINE_LICENSE_SERVER));
-      drmConfigurationBuilder.setLicenseRequestHeaders(requestHeaders);
+      String drmMessage = intent.getStringExtra(LICENSE_TOKEN);
+      if (drmMessage != null) {
+        Map<String, String> requestHeaders = new HashMap<>();
+        requestHeaders.put("X-AxDRM-Message", intent.getStringExtra(LICENSE_TOKEN));
+        drmConfigurationBuilder.setLicenseRequestHeaders(requestHeaders);
+      }
       mediaItemBuilder.setDrmConfiguration(drmConfigurationBuilder.build());
     }
     mMediaItem = mediaItemBuilder.build();
