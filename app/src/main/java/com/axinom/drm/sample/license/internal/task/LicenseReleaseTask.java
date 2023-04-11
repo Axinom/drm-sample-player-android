@@ -23,7 +23,7 @@ import java.io.IOException;
 import java.util.Map;
 
 /**
- * AsyncTask for checking that license is available and valid
+ * AsyncTask for releasing the license
  */
 
 public class LicenseReleaseTask extends AsyncTask<LicenseReleaseTask.Params, Void, Void> {
