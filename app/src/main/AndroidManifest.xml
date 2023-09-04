@@ -11,12 +11,18 @@
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
 
+    <!--Cleartext HTTP traffic is disabled by the default configuration in android application.
+        But for testing purposes we may need to work with http to experiment and test the application.
+        Hence we will enable cleartext http traffic by setting 'usesCleartextTraffic' to true by default
+        to allow more flexible testing and usage. Also, while HTTPS is generally the preferred scheme,
+        license acquisition protocol is also safe over HTTP.-->
     <application
         android:name="com.axinom.drm.sample.application.BaseApp"
         android:label="@string/app_name"
         android:icon="@mipmap/ic_launcher"
         android:allowBackup="false"
         android:theme="@style/AppTheme"
+        android:usesCleartextTraffic="true"
         android:requestLegacyExternalStorage="true">
 
         <activity

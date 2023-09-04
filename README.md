@@ -86,6 +86,8 @@ After the download is successfully completed, the "Play offline" button appears 
 ## Adding sample videos
 
 In order to add your own sample videos to the application, please add entries to [samplelist.json](app/src/main/assets/samplelist.json).
+In case of using http protocol instead of https clear text http traffic must be enabled in the android app.
+This is explicitly added in the AndroidManifest.xml file of this project to support http traffic.
 
 Keys to provide value for are the following:
 
